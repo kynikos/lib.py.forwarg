@@ -20,12 +20,141 @@
 #       https://docs.python.org/3/library/argparse.html
 # TODO: Support Python 2
 
+import sys as _m_sys
+import re as _m_re
 from collections import OrderedDict
 
 
 class HelpFormatter:
     # TODO
     pass
+
+
+class ArgumentGroup:
+    def __init__(self, parser, title, description):
+        self.parser = parser
+        self.title = title
+        self.description = description
+        self.dest_to_argument = OrderedDict()
+
+    def add_argument(self, *nameorflags, action=None, nargs=None, const=None,
+                     default=None, type=None, choices=None, required=None,
+                     help=None, metavar=None, dest=None, version=None):
+        if len(nameorflags) < 1:
+            raise InvalidArgumentNameError()
+
+        # TODO: asserting isn't the best way to validate arguments...
+        assert isinstance(dest, str) or dest is None
+
+        try:
+            argument = OptionalArgument(
+                            self.parser, self, nameorflags,
+                            action=action, nargs=nargs, const=const,
+                            default=default, type=type, choices=choices,
+                            required=required, help=help, metavar=metavar,
+                            dest=dest, version=version)
+        except InvalidArgumentNameError:
+            if len(nameorflags) > 1:
+                raise MultiplePositionalArgumentNamesError(nameorflags)
+            argument = PositionalArgument(
+                            self.parser, self, nameorflags,
+                            action=action, nargs=nargs, const=const,
+                            default=default, type=type, choices=choices,
+                            required=required, help=help, metavar=metavar,
+                            dest=dest, version=version)
+
+        self.dest_to_argument[argument.dest] = argument
+        self.parser.dest_to_argument[argument.dest] = argument
+
+
+class _Argument:
+    NAME_RE = r'[a-zA-Z0-9](?:-?[a-zA-Z0-9])*'
+
+    def __init__(self, parser, group, action, nargs, const, default, type,
+                 choices, required, help, metavar, dest, version):
+        self.parser = parser
+        self.group = group
+
+        # TODO: these arguments still have to be used:
+        #       action
+        #       nargs
+        #       const
+        #       default
+        #       type
+        #       choices
+        #       required
+        #       help
+        #       metavar
+        #       version (required when using action='version')
+        self.dest = dest
+
+        # TODO: The '-' must changed to a '_' in the associated attribute
+        # TODO: Names starting with a digit require the 'dest' parameter
+        if dest in self.parser.dest_to_argument:
+            raise ExistingArgumentError(dest)
+
+    def _make_dest(self, rawdest):
+        # TODO
+        return rawdest
+
+
+class OptionalArgument(_Argument):
+    def __init__(self, parser, group, nameorflags, action, nargs, const,
+                 default, type, choices, required, help, metavar, dest,
+                 version):
+        self.longflags = []
+        self.shortflags = []
+
+        for flag in nameorflags:
+            flagname = flag.lstrip('-')
+            if not isinstance(flag, str) or \
+                    flag[0] != parser.prefix_char or \
+                    not _m_re.match(self.NAME_RE, flagname):
+                raise InvalidArgumentNameError(flagname)
+            if flag[1] == parser.prefix_char:
+                if flagname in parser.longflag_to_optarg:
+                    raise ExistingArgumentError(flagname)
+                self.longflags.append(flagname)
+            else:
+                if flagname in parser.shortflag_to_optarg:
+                    raise ExistingArgumentError(flagname)
+                self.shortflags.append(flagname)
+
+        dest = dest or self._make_dest((self.longflags + self.shortflags)[0])
+
+        super().__init__(parser, group, action=action, nargs=nargs,
+                         const=const, default=default, type=type,
+                         choices=choices, required=required, help=help,
+                         metavar=metavar, dest=dest, version=version)
+
+        # Reference the object only after the whole validation
+        for flag in self.longflags:
+            self.parser.longflag_to_optarg[flag] = self
+        for flag in self.shortflags:
+            self.parser.shortflag_to_optarg[flag] = self
+
+
+class PositionalArgument(_Argument):
+    def __init__(self, parser, group, nameorflags, action, nargs, const,
+                 default, type, choices, required, help, metavar, dest,
+                 version):
+        self.name = nameorflags[0]
+
+        if not isinstance(self.name, str) or \
+                not _m_re.match(self.NAME_RE, self.name):
+            raise InvalidArgumentNameError(self.name)
+        if self.name in parser.name_to_posarg:
+            raise ExistingArgumentError(self.name)
+
+        dest = dest or self._make_dest(self.name)
+
+        super().__init__(parser, group, action=action, nargs=nargs,
+                         const=const, default=default, type=type,
+                         choices=choices, required=required, help=help,
+                         metavar=metavar, dest=dest, version=version)
+
+        # Reference the object only after the whole validation
+        self.parser.name_to_posarg[self.name] = self
 
 
 class ArgumentParser:
@@ -52,8 +181,11 @@ class ArgumentParser:
 
         self.prefix_char = prefix_chars
 
-        self.argument_groups = OrderedDict()
-        self.nameorflag_to_group = {}
+        self.argument_groups = []
+        self.dest_to_argument = OrderedDict()
+        self.name_to_posarg = {}
+        self.longflag_to_optarg = {}
+        self.shortflag_to_optarg = {}
 
     def add_argument_group(self, title=None, description=None):
         # TODO: asserting isn't the best way to validate arguments...
@@ -61,84 +193,30 @@ class ArgumentParser:
         assert isinstance(description, str)
 
         if title in self.argument_groups:
-            raise ExistingArgumentGroupError()
+            raise ExistingArgumentGroupError(title)
 
         group = ArgumentGroup(self, title, description)
-        self.argument_groups[title] = group
+        self.argument_groups.append(group)
 
         return group
 
     def parse_args(self, args=None, namespace=None):
+        # TODO: namespace should be compatible with argparse's
         knownargs, unknownargs = self.parse_known_args(args, namespace)
         if unknownargs:
-            raise UnknownArgumentsError()
+            raise UnknownArgumentsError(unknownargs)
+        # TODO: return a namespace compatible with argparse's
         return knownargs
 
     def parse_known_args(self, args=None, namespace=None):
+        # TODO: namespace should be compatible with argparse's
+        args = args or _m_sys.argv[1:]
         # TODO
-        pass
+        for arg in args:
+            # FIXME
+            print(arg)
 
-
-class ArgumentGroup:
-    def __init__(self, parser, title, description):
-        self.parser = parser
-        self.title = title
-        self.description = description
-        self.arguments = OrderedDict()
-
-    def add_argument(self, *nameorflags, action=None, nargs=None, const=None,
-                     default=None, type=None, choices=None, required=None,
-                     # the version keyword is required when using
-                     # action='version'
-                     help=None, metavar=None, dest=None, version=None):
-        # TODO: these arguments still have to be used:
-        #       action
-        #       nargs
-        #       const
-        #       default
-        #       type
-        #       choices
-        #       required
-        #       help
-        #       metavar
-        #       dest
-        #       version
-        # TODO: asserting isn't the best way to validate arguments...
-        for nameorflag in nameorflags:
-            assert isinstance(nameorflag, str)
-
-        Jnameorflags = ' '.join(nameorflags)
-
-        for nameorflag in nameorflags:
-            if nameorflag in self.parser.nameorflag_to_group:
-                raise ExistingArgumentError()
-            self.parser.nameorflag_to_group[nameorflag] = [self.title,
-                                                           Jnameorflags]
-
-        if nameorflags[0][0] == self.parser.prefix_char:
-            argument = OptionalArgument(self.parser, *nameorflags)
-        elif len(nameorflags) == 1:
-            argument = PositionalArgument(self.parser, nameorflags[0])
-        else:
-            raise MultiplePositionalArgumentNamesError()
-
-        self.arguments[Jnameorflags] = argument
-
-
-class _Argument:
-    NAME_RE = r'[a-zA-Z0-9][a-zA-Z0-9_-]*'
-
-
-class OptionalArgument(_Argument):
-    def __init__(self, parser, *flags):
-        # TODO
-        pass
-
-
-class PositionalArgument(_Argument):
-    def __init__(self, parser, name):
-        # TODO
-        pass
+        # TODO: return a namespace compatible with argparse's
 
 
 class ForwargError(Exception):
@@ -150,6 +228,10 @@ class ExistingArgumentError(ForwargError):
 
 
 class ExistingArgumentGroupError(ForwargError):
+    pass
+
+
+class InvalidArgumentNameError(ForwargError):
     pass
 
 
