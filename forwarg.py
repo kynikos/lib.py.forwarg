@@ -465,11 +465,9 @@ class ArgumentParser:
         #   OptionalArgumentHolder7.parsed_arg_indices = [(9, 3), 10]
         #   PositionalArgumentHolder3.parsed_arg_indices = [11]
 
-        # TODO: Implement nargs=REMAINDER
-
         current_posarg_index = 0
         current_argument = self.posargholders[current_posarg_index]
-        options_enabled = True
+        options_enabled = current_argument.nargs is not REMAINDER
         for index, arg in enumerate(args):
             if options_enabled and arg[0] in self.prefix_chars:
                 if arg[1] in self.prefix_chars:
@@ -495,6 +493,8 @@ class ArgumentParser:
                                 # optargholder can raise UnwantedValueError,
                                 # but in this case it shouldn't be caught
                                 optargholder.action.store_value(value)
+                                if optargholder.nargs is REMAINDER:
+                                    options_enabled = False
                             else:
                                 # The option ends with the separator, without
                                 # a value (ambiguous, better not allow it)
@@ -537,6 +537,8 @@ class ArgumentParser:
                                     # account
                                     self.parsed_args[-1].append(
                                                             arg[subindex + 1:])
+                                    if optargholder.nargs is REMAINDER:
+                                        options_enabled = False
                                     break
                                 else:
                                     # The option ends with the separator,
@@ -556,6 +558,8 @@ class ArgumentParser:
                                     # account
                                     self.parsed_args[-1].append(
                                                             arg[subindex + 1:])
+                                    if optargholder.nargs is REMAINDER:
+                                        options_enabled = False
                                     break
             else:
                 # FIXME
@@ -576,6 +580,8 @@ class ArgumentParser:
                             raise UnknownArgumentError()
                         else:
                             current_argument.action.store_value(arg)
+                            if current_argument.nargs is REMAINDER:
+                                options_enabled = False
                 current_argument.store_index(index)
 
         # TODO: Also check that all arguments that require at least one value,
