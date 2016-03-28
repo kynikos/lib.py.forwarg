@@ -472,8 +472,6 @@ class ArgumentParser:
             if options_enabled and arg[0] in self.prefix_chars:
                 if arg[1] in self.prefix_chars:
                     name, sep, value = arg[2:].partition(self.OPT_SEP)
-                    # FIXME
-                    print('long', name, value)
                     try:
                         optargholder = self.longflag_to_optargholder[name]
                     except KeyError:
@@ -502,8 +500,6 @@ class ArgumentParser:
                         # This is '--option' or '--option=value'
                         self.parsed_args.append(arg)
                 else:
-                    # FIXME
-                    print('short', arg[1:])
                     # This is the initial '-'
                     self.parsed_args.append([arg[0]])
                     for subindex, option in enumerate(arg[1:]):
@@ -562,8 +558,6 @@ class ArgumentParser:
                                         options_enabled = False
                                     break
             else:
-                # FIXME
-                print('value', arg)
                 self.parsed_args.append(arg)
                 try:
                     current_argument.action.store_value(arg)
