@@ -251,8 +251,7 @@ class _ArgumentHolder:
         #       metavar
         #       version (required when using action='version')
 
-        # TODO: nargs is validated by Action.store_value, but if an option
-        #       doesn't get a value, the validation is not performed
+        # nargs is validated when instantiating action
         self.nargs = nargs
         self.const = const
         self.default = default
