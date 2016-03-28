@@ -465,12 +465,13 @@ class ArgumentParser:
         #   OptionalArgumentHolder7.parsed_arg_indices = [(9, 3), 10]
         #   PositionalArgumentHolder3.parsed_arg_indices = [11]
 
-        # TODO: Implement the special '--' option and nargs=REMAINDER
+        # TODO: Implement nargs=REMAINDER
 
         current_posarg_index = 0
         current_argument = self.posargholders[current_posarg_index]
+        options_enabled = True
         for index, arg in enumerate(args):
-            if arg[0] in self.prefix_chars:
+            if options_enabled and arg[0] in self.prefix_chars:
                 if arg[1] in self.prefix_chars:
                     name, sep, value = arg[2:].partition(self.OPT_SEP)
                     # FIXME
@@ -479,7 +480,12 @@ class ArgumentParser:
                     try:
                         optargholder = self.longflag_to_optargholder[name]
                     except KeyError:
-                        raise UnknownArgumentError(arg)
+                        if len(arg) == 2:
+                            # This is the special '--' option
+                            options_enabled = False
+                            continue
+                        else:
+                            raise UnknownArgumentError(arg)
                     else:
                         current_argument = optargholder
                         optargholder.action.process_flag()
