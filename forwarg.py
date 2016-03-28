@@ -476,18 +476,19 @@ class ArgumentParser:
                     name, sep, value = arg[2:].partition(self.OPT_SEP)
                     # FIXME
                     print('long', name, value)
-                    self.parsed_args.append(arg)
                     try:
                         optargholder = self.longflag_to_optargholder[name]
                     except KeyError:
                         if len(arg) == 2:
                             # This is the special '--' option
+                            self.parsed_args.append(arg)
                             options_enabled = False
                             continue
                         else:
                             raise UnknownArgumentError(arg)
                     else:
                         current_argument = optargholder
+                        current_argument.store_index(index)
                         optargholder.action.process_flag()
                         if sep:
                             if value:
@@ -498,35 +499,64 @@ class ArgumentParser:
                                 # The option ends with the separator, without
                                 # a value (ambiguous, better not allow it)
                                 raise InvalidArgumentError(arg)
-                        current_argument.store_index(index)
+                        # This is '--option' or '--option=value'
+                        self.parsed_args.append(arg)
                 else:
                     # FIXME
                     print('short', arg[1:])
-                    options, sep, value = arg[1:].partition(self.OPT_SEP)
-                    self.parsed_args.append([arg[0], *list(options[:-1]),
-                                             options[-1] + sep + value])
-                    for subindex, opt in enumerate(options):
+                    # This is the initial '-'
+                    self.parsed_args.append([arg[0]])
+                    for subindex, option in enumerate(arg[1:]):
                         try:
-                            optargholder = self.shortflag_to_optargholder[opt]
+                            optargholder = self.shortflag_to_optargholder[
+                                                                        option]
                         except KeyError:
                             raise UnknownArgumentError(arg)
                         else:
                             current_argument = optargholder
+                            # Add 1 to subindex because the initial prefix
+                            # (e.g. '-') must be taken into account
+                            current_argument.store_index((index, subindex + 1))
                             optargholder.action.process_flag()
-                            if subindex == len(options) - 1 and sep:
+                            # Add 2 to subindex because the initial prefix
+                            # (e.g. '-') must be taken into account
+                            value = arg[subindex + 2:]
+                            if value == '':
+                                # This is the last short option 'o'
+                                self.parsed_args[-1].append(option)
+                            elif value[0] == self.OPT_SEP:
+                                value = value[1:]
                                 if value:
                                     # optargholder can raise
                                     # UnwantedValueError, but in this case it
                                     # shouldn't be caught
                                     optargholder.action.store_value(value)
+                                    # This is the short option 'o=value'
+                                    # Add 1 to subindex because the initial
+                                    # prefix (e.g. '-') must be taken into
+                                    # account
+                                    self.parsed_args[-1].append(
+                                                            arg[subindex + 1:])
+                                    break
                                 else:
                                     # The option ends with the separator,
                                     # without a value (ambiguous, better not
                                     # allow it)
                                     raise InvalidArgumentError(arg)
-                            # Add 1 to subindex because the initial prefix
-                            # (e.g. '-') must be taken into account
-                            current_argument.store_index((index, subindex + 1))
+                            else:
+                                try:
+                                    optargholder.action.store_value(value)
+                                except UnwantedValueError:
+                                    # This is the short option 'o'
+                                    self.parsed_args[-1].append(option)
+                                else:
+                                    # This is the short option 'ovalue'
+                                    # Add 1 to subindex because the initial
+                                    # prefix (e.g. '-') must be taken into
+                                    # account
+                                    self.parsed_args[-1].append(
+                                                            arg[subindex + 1:])
+                                    break
             else:
                 # FIXME
                 print('value', arg)
