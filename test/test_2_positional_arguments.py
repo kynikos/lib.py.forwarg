@@ -17,5 +17,5 @@ def test_1_positional(_1_positional_argument):
 
 def test_2_positional(_2_positional_arguments):
     for parser in _2_positional_arguments:
-        assert parse(parser) == {'pos1': 'foo',
-                                 'pos2': 'bar'}
+        assert parse(parser) == _m_argparse.Namespace(pos1='foo',
+                                                      pos2='bar')

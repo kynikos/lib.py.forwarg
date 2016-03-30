@@ -25,7 +25,7 @@ from collections import OrderedDict
 #       https://docs.python.org/3/library/argparse.html
 #       Maybe for the help page this module could simply rely on argparse in
 #       general
-from argparse import HelpFormatter
+from argparse import Namespace, HelpFormatter
 
 REMAINDER = object()
 SUPPRESS = object()
@@ -437,7 +437,7 @@ class ArgumentParser:
         # We don't know if '--unknown-option' accepts any values
         # See also http://bugs.python.org/issue16142
 
-        # TODO: Accept a namespace compatible with argparse's
+        # namespace is validated in _check_and_compose_namespace
         # TODO: What should happen if an argument is specified multiple times?
         #       see what argparse does.
         #       If allowed, it could be possible to do something like
@@ -603,11 +603,25 @@ class ArgumentParser:
         # FIXME
         print(self.parsed_args)
 
-        # TODO: return a namespace compatible with argparse's
-        # TODO: Implement SUPPRESS (don't list an argument if it wasn't passed
-        #       to the command line)
-        return {dest: self.dest_to_argholder[dest].value
-                for dest in self.dest_to_argholder}
+        return self._check_and_compose_namespace(namespace)
+
+    def _check_and_compose_namespace(self, namespace):
+        if namespace is None:
+            namespace = Namespace()
+        else:
+            # TODO: asserting isn't the best way to validate arguments...
+            assert isinstance(namespace, Namespace)
+
+        for dest in self.dest_to_argholder:
+            argholder = self.dest_to_argholder[dest]
+            # namespace could have been passed with already some attributes
+            # from another parser, so check that they are not overwritten
+            # TODO: asserting isn't the best way to validate arguments...
+            assert not hasattr(namespace, dest)
+            if argholder.value is not SUPPRESS:
+                setattr(namespace, dest, argholder.value)
+
+        return namespace
 
 
 class ForwargError(Exception):
