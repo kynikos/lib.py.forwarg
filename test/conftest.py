@@ -10,10 +10,10 @@ import argparse as _m_argparse
 
 @pytest.fixture
 def parsers():
-    FWparser = _m_forwarg.ArgumentParser()
     APparser = _m_argparse.ArgumentParser()
+    FWparser = _m_forwarg.ArgumentParser()
 
-    return (FWparser, APparser)
+    return (APparser, FWparser)
 
 
 @pytest.fixture
