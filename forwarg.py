@@ -36,6 +36,15 @@ class Action:
         self.argholder = argholder
 
     def process_flag(self):
+        if self.argholder.number_of_parsed_flags > 0:
+            # call check_value because the flag can be specified multiple
+            # times, and only the last occurrence is checked at the end of the
+            # main parsing loop
+            # If no check was done, it could be possible to do something like
+            # '--option1 --option2 --option1=value', and, if --option1
+            # requires a value, an error wouldn't be raised because it would
+            # be assigned by the second instance
+            self.check_value()
         self._process_flag()
         # Increment this only after _process_flag, for consistency with
         # store_value below
@@ -55,6 +64,16 @@ class Action:
     def _store_value(self, newvalue):
         # This method is assigned dynamically when instantiating the subclasses
         raise NotImplementedError()
+
+    def check_value(self):
+        # This is overridden by at least ActionStoreConst
+        nargs = self.argholder.nargs
+        if ((nargs in (None, '+', REMAINDER) and
+                self.argholder.number_of_parsed_values_for_current_flag < 1) or
+            (isinstance(nargs, int) and
+                self.argholder.number_of_parsed_values_for_current_flag < nargs
+             )):
+            raise InsufficientArgumentsError()
 
 
 class ActionStore(Action):
@@ -144,6 +163,11 @@ class ActionStoreConst(Action):
 
     def _store_value(self, newvalue):
         raise UnwantedValueError(newvalue)
+
+    def check_value(self):
+        # No values are needed and ever stored, so just skip this check for
+        # this action
+        pass
 
 
 class ActionStoreTrue(ActionStoreConst):
@@ -438,12 +462,6 @@ class ArgumentParser:
         # See also http://bugs.python.org/issue16142
 
         # namespace is validated in _check_and_compose_namespace
-        # TODO: What should happen if an argument is specified multiple times?
-        #       see what argparse does.
-        #       If allowed, it could be possible to do something like
-        #       '--option1 --option2 --option1=value', and, if --option1
-        #       requires a value, an error wouldn't be raised because it would
-        #       be assigned by the second instance
 
         args = args or _m_sys.argv[1:]
 
@@ -593,9 +611,6 @@ class ArgumentParser:
                                 options_enabled = False
                 current_argument.store_index(index)
 
-        # TODO: Also check that all arguments that require at least one value,
-        #       do get a value
-
         # TODO: Do the positional arguments have to be parsed in a second loop,
         #       so that the various nargs settings can be properly honored?
         #       Also, it could make sense to support non-greedy nargs values
@@ -614,6 +629,7 @@ class ArgumentParser:
 
         for dest in self.dest_to_argholder:
             argholder = self.dest_to_argholder[dest]
+            argholder.action.check_value()
             # namespace could have been passed with already some attributes
             # from another parser, so check that they are not overwritten
             # TODO: asserting isn't the best way to validate arguments...
@@ -633,6 +649,10 @@ class ExistingArgumentError(ForwargError):
 
 
 class ExistingArgumentGroupError(ForwargError):
+    pass
+
+
+class InsufficientArgumentsError(ForwargError):
     pass
 
 
