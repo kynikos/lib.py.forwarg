@@ -66,14 +66,23 @@ class Action:
         raise NotImplementedError()
 
     def check_value(self):
-        # This is overridden by at least ActionStoreConst
+        # This method is overridden by at least ActionStoreConst
         nargs = self.argholder.nargs
-        if ((nargs in (None, '+', REMAINDER) and
-                self.argholder.number_of_parsed_values_for_current_flag < 1) or
-            (isinstance(nargs, int) and
-                self.argholder.number_of_parsed_values_for_current_flag < nargs
-             )):
-            raise InsufficientArgumentsError()
+
+        # TODO!!!: These checks should take into account whether the flag has
+        #          been passed at all (they are optional)
+
+        if nargs in (None, '+', REMAINDER):
+            if self.argholder.number_of_parsed_values_for_current_flag < 1:
+                raise InsufficientArgumentsError()
+        elif isinstance(nargs, int):
+            if self.argholder.number_of_parsed_values_for_current_flag < nargs:
+                raise InsufficientArgumentsError()
+        # TODO: How does argparse behave if an option has nargs == '*' but no
+        #       value is passed in the command line?
+        elif nargs == '?':
+            if self.argholder.number_of_parsed_values_for_current_flag < 1:
+                self._default_to_const()
 
 
 class ActionStore(Action):
@@ -109,6 +118,9 @@ class ActionStore(Action):
     def _process_flag(self):
         # TODO: Raise an error if the option has already been specified?
         pass
+
+    def _default_to_const(self):
+        self.argholder.value = self.argholder.const
 
 
 class ActionAppend(Action):
@@ -148,6 +160,9 @@ class ActionAppend(Action):
 
     def _process_flag(self):
         pass
+
+    def _default_to_const(self):
+        self._append_plain(self.argholder.const)
 
 
 class ActionStoreConst(Action):
