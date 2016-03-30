@@ -3,6 +3,10 @@ import pytest
 from . import forwarg as _m_forwarg
 import argparse as _m_argparse
 
+# TODO: Compare all the results with argparse (they must behave
+#       the same); in particular, reproduce all the examples in argparse's
+#       doc page
+
 
 @pytest.fixture
 def parsers():

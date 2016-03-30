@@ -16,18 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with forwarg.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO: Implement all argparse features
-#       https://docs.python.org/3/library/argparse.html
-# TODO: When testing, compare all the results with argparse (they must behave
-#       the same); in particular, reproduce all the examples in argparse's
-#       doc page
 # TODO: Support Python 2
 
 import sys as _m_sys
 import re as _m_re
 from collections import OrderedDict
-# TODO: Maybe for the help page this module could simply rely on argparse in
-# general
+# TODO: Implement all argparse features
+#       https://docs.python.org/3/library/argparse.html
+#       Maybe for the help page this module could simply rely on argparse in
+#       general
 from argparse import HelpFormatter
 
 REMAINDER = object()
@@ -243,13 +240,23 @@ class _ArgumentHolder:
         self.parser = parser
         self.group = group
 
-        # TODO: these arguments still have to be used:
-        #       type
-        #       choices
-        #       required
-        #       help
-        #       metavar
-        #       version (required when using action='version')
+        # TODO: These arguments still have to be used
+        if type is not None:
+            # TODO: See at least
+            #       https://docs.python.org/3/library/argparse.html#type
+            #       https://docs.python.org/3/library/argparse.html#default
+            raise NotImplementedError()
+        if choices is not None:
+            raise NotImplementedError()
+        if required is not None:
+            raise NotImplementedError()
+        if help is not None:
+            raise NotImplementedError()
+        if metavar is not None:
+            raise NotImplementedError()
+        if version is not None:
+            # TODO: Required when using action='version'
+            raise NotImplementedError()
 
         # nargs is validated when instantiating action
         self.nargs = nargs
@@ -271,8 +278,6 @@ class _ArgumentHolder:
         self.number_of_parsed_values_for_all_flags = 0
         self.number_of_parsed_values_for_current_flag = 0
         self.parsed_arg_indices = []
-        # TODO: argparse treats default values in a much more complicated way,
-        # see https://docs.python.org/3/library/argparse.html#default
         self.value = self.default
 
     @staticmethod
@@ -368,18 +373,29 @@ class ArgumentParser:
                  prefix_chars='-', fromfile_prefix_chars=None,
                  argument_default=None, conflict_handler='error',
                  add_help=True, allow_abbrev=True):
-        # TODO: these arguments still have to be used:
-        #       prog
-        #       usage
-        #       description
-        #       epilog
-        #       parents
-        #       formatter_class
-        #       fromfile_prefix_chars
-        #       argument_default
-        #       conflict_handler
-        #       add_help
-        #       allow_abbrev
+        # TODO: these arguments still have to be used
+        if prog is not None:
+            raise NotImplementedError()
+        if usage is not None:
+            raise NotImplementedError()
+        if description is not None:
+            raise NotImplementedError()
+        if epilog is not None:
+            raise NotImplementedError()
+        if parents != []:
+            raise NotImplementedError()
+        if formatter_class is not HelpFormatter:
+            raise NotImplementedError()
+        if fromfile_prefix_chars is not None:
+            raise NotImplementedError()
+        if argument_default is not None:
+            raise NotImplementedError()
+        if conflict_handler != 'error':
+            raise NotImplementedError()
+        if add_help is not True:
+            raise NotImplementedError()
+        if allow_abbrev is not True:
+            raise NotImplementedError()
 
         # TODO: asserting isn't the best way to validate arguments...
         assert isinstance(prefix_chars, str) and len(prefix_chars) > 0
@@ -431,7 +447,7 @@ class ArgumentParser:
 
         args = args or _m_sys.argv[1:]
 
-        # TODO: The goal is to obtain objects like:
+        # The goal is to obtain attributes like:
         #   $ syncere posarg1value --option1 value1 value2 --option2=value \
         #   posarg2value1 -abc=value -defvalue posarg2value2 -ghi \
         #   value posarg3value -- --posarg2value3
