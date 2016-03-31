@@ -439,6 +439,8 @@ class ArgumentParser:
         # TODO: asserting isn't the best way to validate arguments...
         assert isinstance(prefix_chars, str) and len(prefix_chars) > 0
 
+        # TODO: Implement/Improve error/exit messages
+
         self.prefix_chars = prefix_chars
         self.pos_arg_re = self.POS_ARG_RE.format(_m_re.escape(
                                                             self.prefix_chars))
@@ -630,6 +632,12 @@ class ArgumentParser:
         #       so that the various nargs settings can be properly honored?
         #       Also, it could make sense to support non-greedy nargs values
         #       such as '??', '*?' and '+?'
+        #       For example compose a string with as many characters as the
+        #       number of found positional arguments; then apply the regular
+        #       expression qualifiers to it, subdividing it into one group for
+        #       each positional argument holder; then assign the actual values
+        #       to the various argument holders according to the number of
+        #       characters in each match group.
         # FIXME
         print(self.parsed_args)
 
