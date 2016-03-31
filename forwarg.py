@@ -36,15 +36,16 @@ class Action:
         self.argholder = argholder
 
     def process_flag(self):
-        if self.argholder.number_of_parsed_flags > 0:
-            # call check_value because the flag can be specified multiple
-            # times, and only the last occurrence is checked at the end of the
-            # main parsing loop
-            # If no check was done, it could be possible to do something like
-            # '--option1 --option2 --option1=value', and, if --option1
-            # requires a value, an error wouldn't be raised because it would
-            # be assigned by the second instance
-            self.check_value()
+        # Call check_value because the flag can be specified multiple
+        #  times, and only the last occurrence is checked at the end of the
+        #  main parsing loop
+        # If no check was done, it could be possible to do something like
+        #  '--option1 --option2 --option1=value', and, if --option1
+        #  requires a value, an error wouldn't be raised because it would
+        #  be assigned by the second instance
+        # Note that check_value already checks
+        #  if self.argholder.number_of_parsed_flags > 0
+        self.check_value()
         self._process_flag()
         # Increment this only after _process_flag, for consistency with
         # store_value below
@@ -69,20 +70,19 @@ class Action:
         # This method is overridden by at least ActionStoreConst
         nargs = self.argholder.nargs
 
-        # TODO!!!: These checks should take into account whether the flag has
-        #          been passed at all (they are optional)
-
-        if nargs in (None, '+', REMAINDER):
-            if self.argholder.number_of_parsed_values_for_current_flag < 1:
-                raise InsufficientArgumentsError()
-        elif isinstance(nargs, int):
-            if self.argholder.number_of_parsed_values_for_current_flag < nargs:
-                raise InsufficientArgumentsError()
-        # TODO: How does argparse behave if an option has nargs == '*' but no
-        #       value is passed in the command line?
-        elif nargs == '?':
-            if self.argholder.number_of_parsed_values_for_current_flag < 1:
-                self._default_to_const()
+        if self.argholder.number_of_parsed_flags > 0 or isinstance(
+                                    self.argholder, PositionalArgumentHolder):
+            if nargs in (None, '+', REMAINDER):
+                if self.argholder.number_of_parsed_values_for_current_flag < 1:
+                    raise InsufficientArgumentsError()
+            elif isinstance(nargs, int):
+                if self.argholder.number_of_parsed_values_for_current_flag < nargs:  # NOQA
+                    raise InsufficientArgumentsError()
+            # TODO: How does argparse behave if an option has nargs == '*' but
+            #       no value is passed in the command line?
+            elif nargs == '?':
+                if self.argholder.number_of_parsed_values_for_current_flag < 1:
+                    self._default_to_const()
 
 
 class ActionStore(Action):
