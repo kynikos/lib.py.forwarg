@@ -480,7 +480,8 @@ class ArgumentParser:
 
         # namespace is validated in _check_and_compose_namespace
 
-        args = args or _m_sys.argv[1:]
+        # TODO: Check that args is an iterable of strings
+        args = _m_sys.argv[1:] if args is None else args
 
         # The goal is to obtain attributes like:
         #   $ syncere posarg1value --option1 value1 value2 --option2=value \
@@ -516,8 +517,15 @@ class ArgumentParser:
         #   PositionalArgumentHolder3.parsed_arg_indices = [11]
 
         current_posarg_index = 0
-        current_argument = self.posargholders[current_posarg_index]
-        options_enabled = current_argument.nargs is not REMAINDER
+        try:
+            current_argument = self.posargholders[current_posarg_index]
+        except IndexError:
+            # There may not be any positional arguments defined
+            current_argument = None
+            options_enabled = True
+        else:
+            options_enabled = current_argument.nargs is not REMAINDER
+
         for index, arg in enumerate(args):
             if options_enabled and arg[0] in self.prefix_chars:
                 if arg[1] in self.prefix_chars:
@@ -626,6 +634,11 @@ class ArgumentParser:
                             current_argument.action.store_value(arg)
                             if current_argument.nargs is REMAINDER:
                                 options_enabled = False
+                except AttributeError:
+                    # AttributeError could be raised if current_argument is
+                    #  None, which can happen at the first loop if there are
+                    #  no defined positional arguments
+                    raise UnknownArgumentError()
                 current_argument.store_index(index)
 
         # TODO: Do the positional arguments have to be parsed in a second loop,
