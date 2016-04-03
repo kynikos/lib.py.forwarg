@@ -91,7 +91,7 @@ class ActionStore(Action):
         nargs = self.argholder.nargs
         if nargs in (None, '?'):
             self._store_value = self._override
-        elif isinstance(nargs, int):
+        elif isinstance(nargs, int) and nargs > -1:
             self._store_value = self._append_limited
         elif nargs in ('*', '+', REMAINDER):
             self._store_value = self._append_unlimited
@@ -129,7 +129,7 @@ class ActionAppend(Action):
         nargs = self.argholder.nargs
         if nargs in (None, '?'):
             self._store_value = self._append_plain
-        elif isinstance(nargs, int):
+        elif isinstance(nargs, int) and nargs > -1:
             self._store_value = self._append_nested_limited
         elif nargs in ('*', '+', REMAINDER):
             self._store_value = self._append_nested_unlimited
