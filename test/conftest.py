@@ -20,7 +20,7 @@ def parsers():
 @pytest.fixture
 def no_arguments(parsers):
     for parser in parsers:
-        group1 = parser.add_argument_group('group1', 'description1')
+        parser.add_argument_group('group1', 'description1')
 
     return parsers
 

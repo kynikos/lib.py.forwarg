@@ -74,10 +74,10 @@ class Action:
                                     self.argholder, PositionalArgumentHolder):
             if nargs in (None, '+', REMAINDER):
                 if self.argholder.number_of_parsed_values_for_current_flag < 1:
-                    raise InsufficientArgumentsError()
+                    raise InsufficientArgumentsError(self.argholder.dest)
             elif isinstance(nargs, int):
                 if self.argholder.number_of_parsed_values_for_current_flag < nargs:  # NOQA
-                    raise InsufficientArgumentsError()
+                    raise InsufficientArgumentsError(self.argholder.dest)
             # TODO: How does argparse behave if an option has nargs == '*' but
             #       no value is passed in the command line?
             elif nargs == '?':
@@ -637,7 +637,7 @@ class ArgumentParser:
                             current_argument = self.posargholders[
                                                         current_posarg_index]
                         except IndexError:
-                            raise UnknownArgumentError()
+                            raise UnknownArgumentError(arg)
                         else:
                             current_argument.action.store_value(arg)
                             if current_argument.nargs is REMAINDER:
@@ -646,7 +646,7 @@ class ArgumentParser:
                     # AttributeError could be raised if current_argument is
                     #  None, which can happen at the first loop if there are
                     #  no defined positional arguments
-                    raise UnknownArgumentError()
+                    raise UnknownArgumentError(arg)
                 current_argument.store_index(index)
 
         # TODO: Do the positional arguments have to be parsed in a second loop,
