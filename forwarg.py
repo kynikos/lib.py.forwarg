@@ -549,12 +549,12 @@ class ArgumentParser:
                                 # optargholder can raise UnwantedValueError,
                                 # but in this case it shouldn't be caught
                                 optargholder.action.store_value(value)
-                                if optargholder.nargs is REMAINDER:
-                                    options_enabled = False
                             else:
                                 # The option ends with the separator, without
                                 # a value (ambiguous, better not allow it)
                                 raise InvalidArgumentError(arg)
+                        if optargholder.nargs is REMAINDER:
+                            options_enabled = False
                         # This is '--option' or '--option=value'
                         self.parsed_args.append(arg)
                 else:
@@ -591,6 +591,8 @@ class ArgumentParser:
                                     # account
                                     self.parsed_args[-1].append(
                                                             arg[subindex + 1:])
+                                    # Set 'options_enabled' here, *before* the
+                                    # 'break'
                                     if optargholder.nargs is REMAINDER:
                                         options_enabled = False
                                     break
@@ -612,9 +614,15 @@ class ArgumentParser:
                                     # account
                                     self.parsed_args[-1].append(
                                                             arg[subindex + 1:])
+                                    # Set 'options_enabled' here, *before* the
+                                    # 'break'
                                     if optargholder.nargs is REMAINDER:
                                         options_enabled = False
                                     break
+                            # This is reached if no 'break' has been
+                            # enctountered
+                            if optargholder.nargs is REMAINDER:
+                                options_enabled = False
             else:
                 self.parsed_args.append(arg)
                 try:

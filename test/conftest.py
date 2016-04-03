@@ -89,3 +89,47 @@ def _2_mixed_arguments(parsers):
         group1.add_argument('-o', '--opt1')
 
     return parsers
+
+
+@pytest.fixture
+def remainder_pos(parsers):
+    for parser in parsers:
+        group1 = parser.add_argument_group('group1', 'description1')
+        group1.add_argument('pos1')
+        group1.add_argument('pos2')
+        # TODO: This won't work when tests on argparse will be enabled
+        group1.add_argument('posR', nargs=_m_forwarg.REMAINDER)
+        group1.add_argument('-o', '--opt1')
+        group1.add_argument('-p', '--opt2')
+
+    return parsers
+
+
+@pytest.fixture
+def remainder_opt(parsers):
+    for parser in parsers:
+        group1 = parser.add_argument_group('group1', 'description1')
+        group1.add_argument('pos1')
+        group1.add_argument('pos2')
+        group1.add_argument('-o', '--opt1')
+        group1.add_argument('-p', '--opt2')
+        # TODO: This won't work when tests on argparse will be enabled
+        group1.add_argument('-R', '--optR', nargs=_m_forwarg.REMAINDER)
+
+    return parsers
+
+
+@pytest.fixture
+def remainder_both(parsers):
+    for parser in parsers:
+        group1 = parser.add_argument_group('group1', 'description1')
+        group1.add_argument('pos1')
+        group1.add_argument('pos2')
+        # TODO: This won't work when tests on argparse will be enabled
+        group1.add_argument('posR', nargs=_m_forwarg.REMAINDER)
+        group1.add_argument('-o', '--opt1')
+        group1.add_argument('-p', '--opt2')
+        # TODO: This won't work when tests on argparse will be enabled
+        group1.add_argument('-R', '--optR', nargs=_m_forwarg.REMAINDER)
+
+    return parsers
