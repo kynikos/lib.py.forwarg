@@ -53,6 +53,8 @@ class Action:
         self.argholder.number_of_parsed_values_for_current_flag = 0
 
     def _process_flag(self, newvalue):
+        # This method can also be assigned dynamically when instantiating the
+        # subclasses
         raise NotImplementedError()
 
     def store_value(self, newvalue):
@@ -63,7 +65,8 @@ class Action:
         self.argholder.number_of_parsed_values_for_current_flag += 1
 
     def _store_value(self, newvalue):
-        # This method is assigned dynamically when instantiating the subclasses
+        # This method can also be assigned dynamically when instantiating the
+        # subclasses
         raise NotImplementedError()
 
     def check_value(self):
@@ -90,13 +93,25 @@ class ActionStore(Action):
         super().__init__(argholder)
         nargs = self.argholder.nargs
         if nargs in (None, '?'):
+            self._process_flag = self._dummy
             self._store_value = self._override
         elif isinstance(nargs, int) and nargs > -1:
+            self._process_flag = self._init_list
             self._store_value = self._append_limited
         elif nargs in ('*', '+', REMAINDER):
+            self._process_flag = self._init_list
             self._store_value = self._append_unlimited
         else:
             raise UnrecognizedNargsError(nargs)
+
+    def _dummy(self):
+        # TODO: Raise an error if the option has already been specified?
+        pass
+
+    def _init_list(self):
+        # The list must be initialized even if the option is passed only
+        # once and without a value
+        self.argholder.value = []
 
     def _override(self, newvalue):
         if self.argholder.number_of_parsed_values_for_current_flag > 0:
@@ -115,10 +130,6 @@ class ActionStore(Action):
         else:
             self.argholder.value.append(newvalue)
 
-    def _process_flag(self):
-        # TODO: Raise an error if the option has already been specified?
-        pass
-
     def _default_to_const(self):
         self.argholder.value = self.argholder.const
 
@@ -128,13 +139,26 @@ class ActionAppend(Action):
         super().__init__(argholder)
         nargs = self.argholder.nargs
         if nargs in (None, '?'):
+            self._process_flag = self._dummy
             self._store_value = self._append_plain
         elif isinstance(nargs, int) and nargs > -1:
+            self._process_flag = self._init_list
             self._store_value = self._append_nested_limited
         elif nargs in ('*', '+', REMAINDER):
+            self._process_flag = self._init_list
             self._store_value = self._append_nested_unlimited
         else:
             raise UnrecognizedNargsError(nargs)
+
+    def _dummy(self):
+        # TODO: Raise an error if the option has already been specified?
+        pass
+
+    def _init_list(self):
+        if self.argholder.number_of_parsed_flags == 0:
+            # The list must be initialized even if the option is passed only
+            # once and without a value
+            self.argholder.value = []
 
     def _append_plain(self, newvalue):
         if self.argholder.number_of_parsed_values_for_current_flag > 0:
@@ -157,9 +181,6 @@ class ActionAppend(Action):
             self.argholder.value.append([newvalue])
         else:
             self.argholder.value[-1].append(newvalue)
-
-    def _process_flag(self):
-        pass
 
     def _default_to_const(self):
         self._append_plain(self.argholder.const)
@@ -628,20 +649,28 @@ class ArgumentParser:
                 try:
                     current_argument.action.store_value(arg)
                 except UnwantedValueError:
-                    current_argument = self.posargholders[current_posarg_index]
                     try:
-                        current_argument.action.store_value(arg)
-                    except UnwantedValueError:
-                        current_posarg_index += 1
-                        try:
-                            current_argument = self.posargholders[
+                        current_argument = self.posargholders[
                                                         current_posarg_index]
-                        except IndexError:
-                            raise UnknownArgumentError(arg)
-                        else:
+                    except IndexError:
+                        # This can be raised if e.g. there's only one optional
+                        # '-O' argument defined and no positional ones, and the
+                        # command-line arguments are e.g. '-O val1 val2'
+                        raise UnknownArgumentError(arg)
+                    else:
+                        try:
                             current_argument.action.store_value(arg)
-                            if current_argument.nargs is REMAINDER:
-                                options_enabled = False
+                        except UnwantedValueError:
+                            current_posarg_index += 1
+                            try:
+                                current_argument = self.posargholders[
+                                                        current_posarg_index]
+                            except IndexError:
+                                raise UnknownArgumentError(arg)
+                            else:
+                                current_argument.action.store_value(arg)
+                                if current_argument.nargs is REMAINDER:
+                                    options_enabled = False
                 except AttributeError:
                     # AttributeError could be raised if current_argument is
                     #  None, which can happen at the first loop if there are
