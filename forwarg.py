@@ -678,7 +678,7 @@ class ArgumentParser:
             # from another parser, so check that they are not overwritten
             # TODO: asserting isn't the best way to validate arguments...
             assert not hasattr(namespace, dest)
-            if argholder.value is not SUPPRESS:
+            if argholder.default is not SUPPRESS:
                 setattr(namespace, dest, argholder.value)
 
         return namespace
