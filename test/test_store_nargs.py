@@ -503,26 +503,148 @@ def test_opt5_5(opt5):
 
 
 @pytest.fixture
-def complex(parser):
-    # TODO
-    parser.add_argument('posNone')
-    parser.add_argument('posQues', nargs='?')
-    parser.add_argument('posQuesC', nargs='?', const='CONST')
+def mixed1(parser):
     parser.add_argument('posStar', nargs='*')
     parser.add_argument('posPlus', nargs='+')
-    parser.add_argument('posRema', nargs=_m_forwarg.REMAINDER)
-    parser.add_argument('pos0', nargs=0)
-    parser.add_argument('pos1', nargs=1)
-    parser.add_argument('pos2', nargs=2)
-    parser.add_argument('pos5', nargs=5)
-    parser.add_argument('-N', '--optNone')
-    parser.add_argument('-Q', '--optQues', nargs='?')
-    parser.add_argument('-C', '--optQuesC', nargs='?', const='CONST')
-    parser.add_argument('-S', '--optStar', nargs='*')
-    parser.add_argument('-P', '--optPlus', nargs='+')
-    parser.add_argument('-R', '--optRema', nargs=_m_forwarg.REMAINDER)
-    parser.add_argument('-0', '--opt0', nargs=0)
-    parser.add_argument('-1', '--opt1', nargs=1)
-    parser.add_argument('-2', '--opt2', nargs=2)
-    parser.add_argument('-5', '--opt5', nargs=5)
     return parser
+
+
+def test_mixed1_1(mixed1):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        mixed1.parse_args(shlex.split(''))
+
+
+def test_mixed1_2(mixed1):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        mixed1.parse_args(shlex.split('foo bar xyz abc def'))
+
+
+@pytest.fixture
+def mixed2(parser):
+    parser.add_argument('posPlus', nargs='+')
+    parser.add_argument('posStar', nargs='*')
+    return parser
+
+
+def test_mixed2_1(mixed2):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        mixed2.parse_args(shlex.split(''))
+
+
+def test_mixed2_2(mixed2):
+    assert mixed2.parse_args(shlex.split('foo bar xyz abc def')) == \
+            _m_argparse.Namespace(posPlus=['foo', 'bar', 'xyz', 'abc', 'def'],
+                                  posStar=None)
+
+
+@pytest.fixture
+def mixed3(parser):
+    parser.add_argument('posNone')
+    parser.add_argument('posStar', nargs='*')
+    parser.add_argument('-C', '--optQuesC', nargs='?', const='CONST')
+    parser.add_argument('-R', '--optRema', nargs=_m_forwarg.REMAINDER)
+    return parser
+
+
+def test_mixed3_1(mixed3):
+    assert mixed3.parse_args(shlex.split('foo bar xyz -C=abc def '
+                                         '--optRema=zzz --noopt -- - '
+                                         'something')) == \
+            _m_argparse.Namespace(posNone='foo',
+                                  posStar=['bar', 'xyz', 'def'],
+                                  optQuesC='abc',
+                                  optRema=['zzz', '--noopt', '--', '-',
+                                           'something'])
+
+
+@pytest.fixture
+def mixed4(parser):
+    parser.add_argument('posQues', nargs='?')
+    parser.add_argument('posPlus', nargs='+')
+    parser.add_argument('-P', '--optPlus', nargs='+')
+    parser.add_argument('-2', '--opt2', nargs=2)
+    return parser
+
+
+def test_mixed4_1(mixed4):
+    assert mixed4.parse_args(shlex.split('foo --opt2=yyy zzz bar xyz -P abc '
+                                         'def')) == \
+            _m_argparse.Namespace(posQues='foo',
+                                  posPlus=['bar', 'xyz'],
+                                  optPlus=['abc', 'def'],
+                                  opt2=['yyy', 'zzz'])
+
+
+@pytest.fixture
+def mixed5(parser):
+    parser.add_argument('posNone')
+    parser.add_argument('posRema', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('-N', '--optNone')
+    parser.add_argument('-S', '--optStar', nargs='*')
+    return parser
+
+
+def test_mixed5_1(mixed5):
+    assert mixed5.parse_args(shlex.split('foo -S bar xyz abc -N def zzz')) == \
+            _m_argparse.Namespace(posNone='foo',
+                                  posRema=['zzz'],
+                                  optStar=['bar', 'xyz', 'abc'],
+                                  optNone='def')
+
+
+def test_mixed5_2(mixed5):
+    assert mixed5.parse_args(shlex.split('foo -N def bar -S xyz abc zzz')) == \
+            _m_argparse.Namespace(posNone='foo',
+                                  posRema=['bar', '-S', 'xyz', 'abc', 'zzz'],
+                                  optStar=None,
+                                  optNone='def')
+
+
+@pytest.fixture
+def mixed6(parser):
+    parser.add_argument('posQues1', nargs='?')
+    parser.add_argument('posQues2', nargs='?')
+    parser.add_argument('-A', '--optA', nargs=2)
+    parser.add_argument('-B', '--optB', nargs=2)
+    return parser
+
+
+def test_mixed6_1(mixed6):
+    assert mixed6.parse_args(shlex.split('-A foo bar -B xyz abc')) == \
+            _m_argparse.Namespace(posQues1=None,
+                                  posQues2=None,
+                                  optA=['foo', 'bar'],
+                                  optB=['xyz', 'abc'])
+
+
+def test_mixed6_2(mixed6):
+    assert mixed6.parse_args(shlex.split('foo -B xyz abc bar')) == \
+            _m_argparse.Namespace(posQues1='foo',
+                                  posQues2='bar',
+                                  optA=None,
+                                  optB=['xyz', 'abc'])
+
+
+def test_mixed6_3(mixed6):
+    assert mixed6.parse_args(shlex.split('foo -B xyz abc')) == \
+            _m_argparse.Namespace(posQues1='foo',
+                                  posQues2=None,
+                                  optA=None,
+                                  optB=['xyz', 'abc'])
+
+
+@pytest.fixture
+def mixed7(parser):
+    parser.add_argument('posA', nargs=2)
+    parser.add_argument('posB', nargs=2)
+    parser.add_argument('-C', '--optQuesC', nargs='?')
+    parser.add_argument('-D', '--optQuesD', nargs='?')
+    return parser
+
+
+def test_mixed7_1(mixed7):
+    assert mixed7.parse_args(shlex.split('def -C foo bar -D xyz abc zzz')) == \
+            _m_argparse.Namespace(posA=['def', 'bar'],
+                                  posB=['abc', 'zzz'],
+                                  optQuesC='foo',
+                                  optQuesD='xyz')
