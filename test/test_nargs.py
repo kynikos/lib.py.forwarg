@@ -7,8 +7,7 @@ import argparse as _m_argparse
 
 @pytest.fixture
 def posNone(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('posNone')
+    parser.add_argument('posNone')
     return parser
 
 
@@ -29,8 +28,7 @@ def test_posNone_3(posNone):
 
 @pytest.fixture
 def posQues(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('posQues', nargs='?')
+    parser.add_argument('posQues', nargs='?')
     return parser
 
 
@@ -51,8 +49,7 @@ def test_posQues_3(posQues):
 
 @pytest.fixture
 def posQuesC(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('posQuesC', nargs='?', const='CONST')
+    parser.add_argument('posQuesC', nargs='?', const='CONST')
     return parser
 
 
@@ -73,8 +70,7 @@ def test_posQuesC_3(posQuesC):
 
 @pytest.fixture
 def posStar(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('posStar', nargs='*')
+    parser.add_argument('posStar', nargs='*')
     return parser
 
 
@@ -101,8 +97,7 @@ def test_posStar_4(posStar):
 
 @pytest.fixture
 def posPlus(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('posPlus', nargs='+')
+    parser.add_argument('posPlus', nargs='+')
     return parser
 
 
@@ -129,8 +124,7 @@ def test_posPlus_4(posPlus):
 
 @pytest.fixture
 def posRema(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('posRema', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('posRema', nargs=_m_forwarg.REMAINDER)
     return parser
 
 
@@ -157,8 +151,7 @@ def test_posRema_4(posRema):
 
 @pytest.fixture
 def pos0(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos0', nargs=0)
+    parser.add_argument('pos0', nargs=0)
     return parser
 
 
@@ -178,8 +171,7 @@ def test_pos0_3(pos0):
 
 @pytest.fixture
 def pos1(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1', nargs=1)
+    parser.add_argument('pos1', nargs=1)
     return parser
 
 
@@ -200,8 +192,7 @@ def test_pos1_3(pos1):
 
 @pytest.fixture
 def pos2(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos2', nargs=2)
+    parser.add_argument('pos2', nargs=2)
     return parser
 
 
@@ -227,8 +218,7 @@ def test_pos2_4(pos2):
 
 @pytest.fixture
 def pos5(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos5', nargs=5)
+    parser.add_argument('pos5', nargs=5)
     return parser
 
 
@@ -254,8 +244,7 @@ def test_pos5_4(pos5):
 
 @pytest.fixture
 def optNone(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-N', '--optNone')
+    parser.add_argument('-N', '--optNone')
     return parser
 
 
@@ -281,8 +270,7 @@ def test_optNone_4(optNone):
 
 @pytest.fixture
 def optQues(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-Q', '--optQues', nargs='?')
+    parser.add_argument('-Q', '--optQues', nargs='?')
     return parser
 
 
@@ -308,8 +296,7 @@ def test_optQues_4(optQues):
 
 @pytest.fixture
 def optQuesC(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-C', '--optQuesC', nargs='?', const='CONST')
+    parser.add_argument('-C', '--optQuesC', nargs='?', const='CONST')
     return parser
 
 
@@ -335,8 +322,7 @@ def test_optQuesC_4(optQuesC):
 
 @pytest.fixture
 def optStar(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-S', '--optStar', nargs='*')
+    parser.add_argument('-S', '--optStar', nargs='*')
     return parser
 
 
@@ -362,8 +348,7 @@ def test_optStar_4(optStar):
 
 @pytest.fixture
 def optPlus(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-P', '--optPlus', nargs='+')
+    parser.add_argument('-P', '--optPlus', nargs='+')
     return parser
 
 
@@ -389,8 +374,7 @@ def test_optPlus_4(optPlus):
 
 @pytest.fixture
 def optRema(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-R', '--optRema', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('-R', '--optRema', nargs=_m_forwarg.REMAINDER)
     return parser
 
 
@@ -416,8 +400,7 @@ def test_optRema_4(optRema):
 
 @pytest.fixture
 def opt0(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-0', '--opt0', nargs=0)
+    parser.add_argument('-0', '--opt0', nargs=0)
     return parser
 
 
@@ -436,8 +419,7 @@ def test_opt0_3(opt0):
 
 @pytest.fixture
 def opt1(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-1', '--opt1', nargs=1)
+    parser.add_argument('-1', '--opt1', nargs=1)
     return parser
 
 
@@ -462,8 +444,7 @@ def test_opt1_4(opt1):
 
 @pytest.fixture
 def opt2(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-2', '--opt2', nargs=2)
+    parser.add_argument('-2', '--opt2', nargs=2)
     return parser
 
 
@@ -493,8 +474,7 @@ def test_opt2_5(opt2):
 
 @pytest.fixture
 def opt5(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-5', '--opt5', nargs=5)
+    parser.add_argument('-5', '--opt5', nargs=5)
     return parser
 
 
@@ -525,25 +505,24 @@ def test_opt5_5(opt5):
 @pytest.fixture
 def complex(parser):
     # TODO
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('posNone')
-    group1.add_argument('posQues', nargs='?')
-    group1.add_argument('posQuesC', nargs='?', const='CONST')
-    group1.add_argument('posStar', nargs='*')
-    group1.add_argument('posPlus', nargs='+')
-    group1.add_argument('posRema', nargs=_m_forwarg.REMAINDER)
-    group1.add_argument('pos0', nargs=0)
-    group1.add_argument('pos1', nargs=1)
-    group1.add_argument('pos2', nargs=2)
-    group1.add_argument('pos5', nargs=5)
-    group1.add_argument('-N', '--optNone')
-    group1.add_argument('-Q', '--optQues', nargs='?')
-    group1.add_argument('-C', '--optQuesC', nargs='?', const='CONST')
-    group1.add_argument('-S', '--optStar', nargs='*')
-    group1.add_argument('-P', '--optPlus', nargs='+')
-    group1.add_argument('-R', '--optRema', nargs=_m_forwarg.REMAINDER)
-    group1.add_argument('-0', '--opt0', nargs=0)
-    group1.add_argument('-1', '--opt1', nargs=1)
-    group1.add_argument('-2', '--opt2', nargs=2)
-    group1.add_argument('-5', '--opt5', nargs=5)
+    parser.add_argument('posNone')
+    parser.add_argument('posQues', nargs='?')
+    parser.add_argument('posQuesC', nargs='?', const='CONST')
+    parser.add_argument('posStar', nargs='*')
+    parser.add_argument('posPlus', nargs='+')
+    parser.add_argument('posRema', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('pos0', nargs=0)
+    parser.add_argument('pos1', nargs=1)
+    parser.add_argument('pos2', nargs=2)
+    parser.add_argument('pos5', nargs=5)
+    parser.add_argument('-N', '--optNone')
+    parser.add_argument('-Q', '--optQues', nargs='?')
+    parser.add_argument('-C', '--optQuesC', nargs='?', const='CONST')
+    parser.add_argument('-S', '--optStar', nargs='*')
+    parser.add_argument('-P', '--optPlus', nargs='+')
+    parser.add_argument('-R', '--optRema', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('-0', '--opt0', nargs=0)
+    parser.add_argument('-1', '--opt1', nargs=1)
+    parser.add_argument('-2', '--opt2', nargs=2)
+    parser.add_argument('-5', '--opt5', nargs=5)
     return parser

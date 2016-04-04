@@ -7,59 +7,51 @@ import argparse as _m_argparse
 
 @pytest.fixture
 def no_arguments(parser):
-    parser.add_argument_group('group1', 'description1')
     return parser
 
 
 @pytest.fixture
 def _1_positional_argument(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1')
+    parser.add_argument('pos1')
     return parser
 
 
 @pytest.fixture
 def _2_positional_arguments(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1')
-    group1.add_argument('pos2')
+    parser.add_argument('pos1')
+    parser.add_argument('pos2')
     return parser
 
 
 @pytest.fixture
 def _1_optional_argument_long(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('--opt1')
+    parser.add_argument('--opt1')
     return parser
 
 
 @pytest.fixture
 def _1_optional_argument_short(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-o')
+    parser.add_argument('-o')
     return parser
 
 
 @pytest.fixture
 def _1_optional_argument(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-o', '--opt1')
+    parser.add_argument('-o', '--opt1')
     return parser
 
 
 @pytest.fixture
 def _2_optional_arguments(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-o', '--opt1')
-    group1.add_argument('-p', '--opt2')
+    parser.add_argument('-o', '--opt1')
+    parser.add_argument('-p', '--opt2')
     return parser
 
 
 @pytest.fixture
 def _2_mixed_arguments(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1')
-    group1.add_argument('-o', '--opt1')
+    parser.add_argument('pos1')
+    parser.add_argument('-o', '--opt1')
     return parser
 
 

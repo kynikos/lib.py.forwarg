@@ -7,15 +7,14 @@ import argparse as _m_argparse
 
 @pytest.fixture
 def suppress(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1')
+    parser.add_argument('pos1')
     # TODO: This won't work when tests on argparse will be enabled
-    group1.add_argument('posS', default=_m_forwarg.SUPPRESS)
-    group1.add_argument('pos2')
-    group1.add_argument('-o', '--opt1')
+    parser.add_argument('posS', default=_m_forwarg.SUPPRESS)
+    parser.add_argument('pos2')
+    parser.add_argument('-o', '--opt1')
     # TODO: This won't work when tests on argparse will be enabled
-    group1.add_argument('-S', '--optS', default=_m_forwarg.SUPPRESS)
-    group1.add_argument('-p', '--opt2')
+    parser.add_argument('-S', '--optS', default=_m_forwarg.SUPPRESS)
+    parser.add_argument('-p', '--opt2')
     return parser
 
 

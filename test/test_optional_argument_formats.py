@@ -7,8 +7,7 @@ import argparse as _m_argparse
 
 @pytest.fixture
 def _1_optional_argument(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('-o', '--opt1')
+    parser.add_argument('-o', '--opt1')
     return parser
 
 

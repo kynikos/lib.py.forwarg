@@ -7,39 +7,36 @@ import argparse as _m_argparse
 
 @pytest.fixture
 def remainder_pos(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1')
-    group1.add_argument('pos2')
+    parser.add_argument('pos1')
+    parser.add_argument('pos2')
     # TODO: This won't work when tests on argparse will be enabled
-    group1.add_argument('posR', nargs=_m_forwarg.REMAINDER)
-    group1.add_argument('-o', '--opt1')
-    group1.add_argument('-p', '--opt2')
+    parser.add_argument('posR', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('-o', '--opt1')
+    parser.add_argument('-p', '--opt2')
     return parser
 
 
 @pytest.fixture
 def remainder_opt(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1')
-    group1.add_argument('pos2')
-    group1.add_argument('-o', '--opt1')
-    group1.add_argument('-p', '--opt2')
+    parser.add_argument('pos1')
+    parser.add_argument('pos2')
+    parser.add_argument('-o', '--opt1')
+    parser.add_argument('-p', '--opt2')
     # TODO: This won't work when tests on argparse will be enabled
-    group1.add_argument('-R', '--optR', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('-R', '--optR', nargs=_m_forwarg.REMAINDER)
     return parser
 
 
 @pytest.fixture
 def remainder_both(parser):
-    group1 = parser.add_argument_group('group1', 'description1')
-    group1.add_argument('pos1')
-    group1.add_argument('pos2')
+    parser.add_argument('pos1')
+    parser.add_argument('pos2')
     # TODO: This won't work when tests on argparse will be enabled
-    group1.add_argument('posR', nargs=_m_forwarg.REMAINDER)
-    group1.add_argument('-o', '--opt1')
-    group1.add_argument('-p', '--opt2')
+    parser.add_argument('posR', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('-o', '--opt1')
+    parser.add_argument('-p', '--opt2')
     # TODO: This won't work when tests on argparse will be enabled
-    group1.add_argument('-R', '--optR', nargs=_m_forwarg.REMAINDER)
+    parser.add_argument('-R', '--optR', nargs=_m_forwarg.REMAINDER)
     return parser
 
 
