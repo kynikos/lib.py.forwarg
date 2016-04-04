@@ -367,7 +367,24 @@ def optPlus(parser):
     return parser
 
 
-# TODO
+def test_optPlus_1(optPlus):
+    assert optPlus.parse_args(shlex.split('')) == _m_argparse.Namespace(
+                                                                optPlus=None)
+
+
+def test_optPlus_2(optPlus):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        optPlus.parse_args(shlex.split('-P'))
+
+
+def test_optPlus_3(optPlus):
+    assert optPlus.parse_args(shlex.split('-P foo')) == _m_argparse.Namespace(
+                                                            optPlus=['foo'])
+
+
+def test_optPlus_4(optPlus):
+    assert optPlus.parse_args(shlex.split('-P foo bar xyz abc')) == \
+                    _m_argparse.Namespace(optPlus=['foo', 'bar', 'xyz', 'abc'])
 
 
 @pytest.fixture
@@ -377,7 +394,24 @@ def optRema(parser):
     return parser
 
 
-# TODO
+def test_optRema_1(optRema):
+    assert optRema.parse_args(shlex.split('')) == _m_argparse.Namespace(
+                                                                optRema=None)
+
+
+def test_optRema_2(optRema):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        optRema.parse_args(shlex.split('-R'))
+
+
+def test_optRema_3(optRema):
+    assert optRema.parse_args(shlex.split('-R foo')) == _m_argparse.Namespace(
+                                                            optRema=['foo'])
+
+
+def test_optRema_4(optRema):
+    assert optRema.parse_args(shlex.split('-R foo bar xyz abc')) == \
+                    _m_argparse.Namespace(optRema=['foo', 'bar', 'xyz', 'abc'])
 
 
 @pytest.fixture
@@ -387,7 +421,17 @@ def opt0(parser):
     return parser
 
 
-# TODO
+def test_opt0_1(opt0):
+    assert opt0.parse_args(shlex.split('')) == _m_argparse.Namespace(opt0=None)
+
+
+def test_opt0_2(opt0):
+    assert opt0.parse_args(shlex.split('-0')) == _m_argparse.Namespace(opt0=[])
+
+
+def test_opt0_3(opt0):
+    with pytest.raises(_m_forwarg.UnknownArgumentError):
+        opt0.parse_args(shlex.split('-0 foo'))
 
 
 @pytest.fixture
@@ -397,7 +441,23 @@ def opt1(parser):
     return parser
 
 
-# TODO
+def test_opt1_1(opt1):
+    assert opt1.parse_args(shlex.split('')) == _m_argparse.Namespace(opt1=None)
+
+
+def test_opt1_2(opt1):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        opt1.parse_args(shlex.split('-1'))
+
+
+def test_opt1_3(opt1):
+    assert opt1.parse_args(shlex.split('-1 foo')) == _m_argparse.Namespace(
+                                                                opt1=['foo'])
+
+
+def test_opt1_4(opt1):
+    with pytest.raises(_m_forwarg.UnknownArgumentError):
+        opt1.parse_args(shlex.split('-1 foo bar'))
 
 
 @pytest.fixture
@@ -407,7 +467,28 @@ def opt2(parser):
     return parser
 
 
-# TODO
+def test_opt2_1(opt2):
+    assert opt2.parse_args(shlex.split('')) == _m_argparse.Namespace(opt2=None)
+
+
+def test_opt2_2(opt2):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        opt2.parse_args(shlex.split('-2'))
+
+
+def test_opt2_3(opt2):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        opt2.parse_args(shlex.split('-2 foo'))
+
+
+def test_opt2_4(opt2):
+    assert opt2.parse_args(shlex.split('-2 foo bar')) == _m_argparse.Namespace(
+                                                        opt2=['foo', 'bar'])
+
+
+def test_opt2_5(opt2):
+    with pytest.raises(_m_forwarg.UnknownArgumentError):
+        opt2.parse_args(shlex.split('-2 foo bar xyz'))
 
 
 @pytest.fixture
@@ -417,11 +498,33 @@ def opt5(parser):
     return parser
 
 
-# TODO
+def test_opt5_1(opt5):
+    assert opt5.parse_args(shlex.split('')) == _m_argparse.Namespace(opt5=None)
+
+
+def test_opt5_2(opt5):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        opt5.parse_args(shlex.split('-5'))
+
+
+def test_opt5_3(opt5):
+    with pytest.raises(_m_forwarg.InsufficientArgumentsError):
+        opt5.parse_args(shlex.split('-5 foo bar xyz abc'))
+
+
+def test_opt5_4(opt5):
+    assert opt5.parse_args(shlex.split('-5 foo bar xyz abc def')) == \
+                _m_argparse.Namespace(opt5=['foo', 'bar', 'xyz', 'abc', 'def'])
+
+
+def test_opt5_5(opt5):
+    with pytest.raises(_m_forwarg.UnknownArgumentError):
+        opt5.parse_args(shlex.split('-5 foo bar xyz abc def ghi'))
 
 
 @pytest.fixture
 def complex(parser):
+    # TODO
     group1 = parser.add_argument_group('group1', 'description1')
     group1.add_argument('posNone')
     group1.add_argument('posQues', nargs='?')
@@ -444,6 +547,3 @@ def complex(parser):
     group1.add_argument('-2', '--opt2', nargs=2)
     group1.add_argument('-5', '--opt5', nargs=5)
     return parser
-
-
-# TODO
