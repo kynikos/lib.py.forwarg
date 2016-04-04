@@ -255,29 +255,12 @@ class ArgumentHolderGroup:
                      const=None, default=None, type=None, choices=None,
                      required=None, help=None, metavar=None, dest=None,
                      version=None):
-        if len(nameorflags) < 1:
-            raise InvalidArgumentNameError()
+        self.do_add_argument(_ArgumentHolder.create(
+                self.parser, nameorflags, action, nargs, const, default, type,
+                choices, required, help, metavar, dest, version))
 
-        # TODO: asserting isn't the best way to validate arguments...
-        assert isinstance(dest, str) or dest is None
-
-        try:
-            argholder = OptionalArgumentHolder(
-                            self.parser, self, nameorflags,
-                            action=action, nargs=nargs, const=const,
-                            default=default, type=type, choices=choices,
-                            required=required, help=help, metavar=metavar,
-                            dest=dest, version=version)
-        except InvalidArgumentNameError:
-            if len(nameorflags) > 1:
-                raise MultiplePositionalArgumentNamesError(nameorflags)
-            argholder = PositionalArgumentHolder(
-                            self.parser, self, nameorflags,
-                            action=action, nargs=nargs, const=const,
-                            default=default, type=type, choices=choices,
-                            required=required, help=help, metavar=metavar,
-                            dest=dest, version=version)
-
+    def do_add_argument(self, argholder):
+        argholder.set_group(self)
         self.dest_to_argholder[argholder.dest] = argholder
         self.parser.dest_to_argholder[argholder.dest] = argholder
 
@@ -295,10 +278,35 @@ class _ArgumentHolder:
             'version': ActionVersion,
     }
 
-    def __init__(self, parser, group, action, nargs, const, default, type,
-                 choices, required, help, metavar, dest, version):
+    @classmethod
+    def create(cls, parser, nameorflags, action, nargs, const, default, type,
+               choices, required, help, metavar, dest, version):
+        if len(nameorflags) < 1:
+            raise InvalidArgumentNameError()
+
+        # TODO: asserting isn't the best way to validate arguments...
+        assert isinstance(dest, str) or dest is None
+
+        try:
+            return OptionalArgumentHolder(
+                            parser, nameorflags,
+                            action=action, nargs=nargs, const=const,
+                            default=default, type=type, choices=choices,
+                            required=required, help=help, metavar=metavar,
+                            dest=dest, version=version)
+        except InvalidArgumentNameError:
+            if len(nameorflags) > 1:
+                raise MultiplePositionalArgumentNamesError(nameorflags)
+            return PositionalArgumentHolder(
+                            parser, nameorflags,
+                            action=action, nargs=nargs, const=const,
+                            default=default, type=type, choices=choices,
+                            required=required, help=help, metavar=metavar,
+                            dest=dest, version=version)
+
+    def __init__(self, parser, action, nargs, const, default, type, choices,
+                 required, help, metavar, dest, version):
         self.parser = parser
-        self.group = group
 
         # TODO: These arguments still have to be used
         if type is not None:
@@ -340,6 +348,9 @@ class _ArgumentHolder:
         self.parsed_arg_indices = []
         self.value = self.default
 
+    def set_group(self, group):
+        self.group = group
+
     @staticmethod
     def _make_dest(parser, rawdest):
         dest = _m_re.sub(r'[^a-zA-Z0-9_]', '_', rawdest)
@@ -358,7 +369,7 @@ class _ArgumentHolder:
 
 
 class OptionalArgumentHolder(_ArgumentHolder):
-    def __init__(self, parser, group, nameorflags, action, nargs, const,
+    def __init__(self, parser, nameorflags, action, nargs, const,
                  default, type, choices, required, help, metavar, dest,
                  version):
         self.longflags = []
@@ -380,7 +391,7 @@ class OptionalArgumentHolder(_ArgumentHolder):
 
         dest = dest or self._make_dest(parser,
                                        (self.longflags + self.shortflags)[0])
-        super().__init__(parser, group, action=action, nargs=nargs,
+        super().__init__(parser, action=action, nargs=nargs,
                          const=const, default=default, type=type,
                          choices=choices, required=required, help=help,
                          metavar=metavar, dest=dest, version=version)
@@ -393,7 +404,7 @@ class OptionalArgumentHolder(_ArgumentHolder):
 
 
 class PositionalArgumentHolder(_ArgumentHolder):
-    def __init__(self, parser, group, nameorflags, action, nargs, const,
+    def __init__(self, parser, nameorflags, action, nargs, const,
                  default, type, choices, required, help, metavar, dest,
                  version):
         self.name = nameorflags[0]
@@ -409,7 +420,7 @@ class PositionalArgumentHolder(_ArgumentHolder):
         # TODO: asserting isn't the best way to validate arguments...
         assert action is 'store'
         dest = dest or self._make_dest(parser, self.name)
-        super().__init__(parser, group, action=action, nargs=nargs,
+        super().__init__(parser, action=action, nargs=nargs,
                          const=const, default=default, type=type,
                          choices=choices, required=required, help=help,
                          metavar=metavar, dest=dest, version=version)
@@ -470,7 +481,7 @@ class ArgumentParser:
         self.shortopt_arg_re = self.SHORTOPT_ARG_RE.format(_m_re.escape(
                                                             self.prefix_chars))
 
-        self.argholder_groups = []
+        self.title_to_group = {}
         self.dest_to_argholder = OrderedDict()
         self.name_to_posargholder = {}
         self.posargholders = []
@@ -481,16 +492,39 @@ class ArgumentParser:
 
     def add_argument_group(self, title=None, description=None):
         # TODO: asserting isn't the best way to validate arguments...
+        # TODO: argparse accepts title=None???
         assert isinstance(title, str)
-        assert isinstance(description, str)
+        assert isinstance(description, str) or description is None
 
-        if title in self.argholder_groups:
+        if title in self.title_to_group:
             raise ExistingArgumentGroupError(title)
 
         group = ArgumentHolderGroup(self, title, description)
-        self.argholder_groups.append(group)
+        self.title_to_group[title] = group
 
         return group
+
+    def add_argument(self, *nameorflags, action='store', nargs=None,
+                     const=None, default=None, type=None, choices=None,
+                     required=None, help=None, metavar=None, dest=None,
+                     version=None):
+        argholder = _ArgumentHolder.create(
+                        self, nameorflags, action, nargs, const, default, type,
+                        choices, required, help, metavar, dest, version)
+        if isinstance(argholder, PositionalArgumentHolder):
+            try:
+                group = self.add_argument_group('positional arguments')
+            except ExistingArgumentGroupError:
+                group = self.title_to_group['positional arguments']
+        elif isinstance(argholder, OptionalArgumentHolder):
+            try:
+                group = self.add_argument_group('optional arguments')
+            except ExistingArgumentGroupError:
+                group = self.title_to_group['optional arguments']
+        else:
+            # Just in case in the future more argument types were implemented?
+            raise UnknownArgumentType(argholder.dest)
+        group.do_add_argument(argholder)
 
     def parse_args(self, args=None, namespace=None):
         # Don't try to define a parse_known_args method, since there are many
@@ -742,6 +776,10 @@ class MultiplePositionalArgumentNamesError(ForwargError):
 
 
 class UnknownArgumentError(ForwargError):
+    pass
+
+
+class UnknownArgumentType(ForwargError):
     pass
 
 
