@@ -139,22 +139,15 @@ class ActionAppend(Action):
         super().__init__(argholder)
         nargs = self.argholder.nargs
         if nargs in (None, '?'):
-            self._process_flag = self._dummy
             self._store_value = self._append_plain
         elif isinstance(nargs, int) and nargs > -1:
-            self._process_flag = self._init_list
             self._store_value = self._append_nested_limited
         elif nargs in ('*', '+', REMAINDER):
-            self._process_flag = self._init_list
             self._store_value = self._append_nested_unlimited
         else:
             raise UnrecognizedNargsError(nargs)
 
-    def _dummy(self):
-        # TODO: Raise an error if the option has already been specified?
-        pass
-
-    def _init_list(self):
+    def _process_flag(self):
         if self.argholder.number_of_parsed_flags == 0:
             # The list must be initialized even if the option is passed only
             # once and without a value
