@@ -5,10 +5,11 @@ from . import forwarg as _m_forwarg
 import argparse as _m_argparse
 
 
-@pytest.fixture
-def parser():
-    # TODO: Compare with argparse
-    parser = _m_forwarg.ArgumentParser(prefix_chars='+')
+# TODO: Compare all the results with argparse (they must behave the same)
+#@pytest.fixture(params = [_m_argparse, _m_forwarg])
+@pytest.fixture(params=[_m_forwarg])
+def parser(request):
+    parser = request.param.ArgumentParser(prefix_chars='+')
     parser.add_argument('+O', action='store_false')
     parser.add_argument('+P', action='store_true')
     return parser
