@@ -335,6 +335,8 @@ class _ArgumentHolder:
 
         # Instantiating action may require the other attributes to be already
         # set, so do it *after* storing them
+        # TODO: Also support argparse's Action classes? Otherwise warn that
+        #       they aren't supported
         try:
             Action_ = self.ACTIONS[action]
         except KeyError:
