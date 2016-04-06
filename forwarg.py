@@ -70,6 +70,11 @@ class Action:
         raise NotImplementedError()
 
     def check_value(self):
+        raise NotImplementedError()
+
+
+class _ActionStore(Action):
+    def check_value(self):
         # This method is overridden by at least ActionStoreConst
         nargs = self.argholder.nargs
 
@@ -87,8 +92,11 @@ class Action:
                 if self.argholder.number_of_parsed_values_for_current_flag < 1:
                     self._default_to_const()
 
+    def _default_to_const(self):
+        raise NotImplementedError()
 
-class ActionStore(Action):
+
+class ActionStore(_ActionStore):
     def __init__(self, argholder):
         super().__init__(argholder)
         nargs = self.argholder.nargs
@@ -134,7 +142,7 @@ class ActionStore(Action):
         self.argholder.value = self.argholder.const
 
 
-class ActionAppend(Action):
+class ActionAppend(_ActionStore):
     def __init__(self, argholder):
         super().__init__(argholder)
         nargs = self.argholder.nargs
