@@ -52,7 +52,7 @@ class Action:
         self.argholder.number_of_parsed_flags += 1
         self.argholder.number_of_parsed_values_for_current_flag = 0
 
-    def _process_flag(self, newvalue):
+    def _process_flag(self):
         # This method can also be assigned dynamically when instantiating the
         # subclasses
         raise NotImplementedError()
