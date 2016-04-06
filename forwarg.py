@@ -603,6 +603,7 @@ class ArgumentParser:
                             else:
                                 # The option ends with the separator, without
                                 # a value (ambiguous, better not allow it)
+                                # TODO: But does argparse support this?
                                 raise InvalidArgumentError(arg)
                         if optargholder.nargs is REMAINDER:
                             options_enabled = False
@@ -651,6 +652,7 @@ class ArgumentParser:
                                     # The option ends with the separator,
                                     # without a value (ambiguous, better not
                                     # allow it)
+                                    # TODO: But does argparse support this?
                                     raise InvalidArgumentError(arg)
                             else:
                                 try:
