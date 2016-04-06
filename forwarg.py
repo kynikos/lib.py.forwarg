@@ -487,7 +487,10 @@ class ArgumentParser:
         # TODO: asserting isn't the best way to validate arguments...
         # TODO: argparse accepts title=None???
         assert isinstance(title, str)
-        assert isinstance(description, str) or description is None
+
+        # TODO: 'description' needs to be implemented
+        if description is not None:
+            raise NotImplementedError()
 
         if title in self.title_to_group:
             raise ExistingArgumentGroupError(title)
