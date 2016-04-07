@@ -492,6 +492,11 @@ class ArgumentParser:
         self.shortflag_to_optargholder = {}
 
         self.parsed_args = []
+        # TODO: This is still a big difference from argparse: all the parsing
+        #       results are stored directly in parser's attributes, while
+        #       argparse keeps the parser clean, and stores the results in a
+        #       separate Namespace object
+        self.namespace = Namespace()
 
     def add_argument_group(self, title=None, description=None):
         # TODO: asserting isn't the best way to validate arguments...
@@ -731,14 +736,18 @@ class ArgumentParser:
         #       to the various argument holders according to the number of
         #       characters in each match group.
 
-        return self._check_and_compose_namespace(namespace)
+        # TODO: This is still a big difference from argparse: all the parsing
+        #       results are stored directly in parser's attributes, while
+        #       argparse keeps the parser clean, and stores the results in a
+        #       separate Namespace object
+        self._check_and_compose_namespace(namespace)
+        return self.namespace
 
     def _check_and_compose_namespace(self, namespace):
-        if namespace is None:
-            namespace = Namespace()
-        else:
+        if namespace is not None:
             # TODO: asserting isn't the best way to validate arguments...
             assert isinstance(namespace, Namespace)
+            self.namespace = namespace
 
         for dest in self.dest_to_argholder:
             argholder = self.dest_to_argholder[dest]
@@ -746,11 +755,9 @@ class ArgumentParser:
             # namespace could have been passed with already some attributes
             # from another parser, so check that they are not overwritten
             # TODO: asserting isn't the best way to validate arguments...
-            assert not hasattr(namespace, dest)
+            assert not hasattr(self.namespace, dest)
             if argholder.default is not SUPPRESS:
-                setattr(namespace, dest, argholder.value)
-
-        return namespace
+                setattr(self.namespace, dest, argholder.value)
 
 
 class ForwargError(Exception):
