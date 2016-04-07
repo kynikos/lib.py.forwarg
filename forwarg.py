@@ -730,8 +730,6 @@ class ArgumentParser:
         #       each positional argument holder; then assign the actual values
         #       to the various argument holders according to the number of
         #       characters in each match group.
-        # FIXME
-        print(self.parsed_args)
 
         return self._check_and_compose_namespace(namespace)
 
