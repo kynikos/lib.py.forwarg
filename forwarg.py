@@ -591,139 +591,29 @@ class ArgumentParser:
             options_enabled = True
         else:
             options_enabled = current_argument.nargs is not REMAINDER
+        ContinueLoop = type('ContinueLoop', (Exception, ), {})
 
         for index, arg in enumerate(args):
             if options_enabled and arg[0] in self.prefix_chars:
                 if arg[1] in self.prefix_chars:
-                    name, sep, value = arg[2:].partition(self.OPT_SEP)
                     try:
-                        optargholder = self.longflag_to_optargholder[name]
-                    except KeyError:
-                        if len(arg) == 2:
-                            # This is the special '--' option
-                            self.parsed_args.append(arg)
-                            options_enabled = False
-                            continue
-                        else:
-                            raise UnknownArgumentError(arg)
-                    else:
-                        current_argument = optargholder
-                        current_argument.store_index(index)
-                        optargholder.action.process_flag()
-                        if sep:
-                            if value:
-                                # optargholder can raise UnwantedValueError,
-                                # but in this case it shouldn't be caught
-                                optargholder.action.store_value(value)
-                            else:
-                                # The option ends with the separator, without
-                                # a value (ambiguous, better not allow it)
-                                # TODO: But does argparse support this?
-                                raise InvalidArgumentError(arg)
-                        if optargholder.nargs is REMAINDER:
-                            options_enabled = False
-                        # This is '--option' or '--option=value'
-                        self.parsed_args.append(arg)
+                        current_argument, options_enabled = \
+                            self._parse_long_flag(index, arg, current_argument,
+                                                  options_enabled,
+                                                  ContinueLoop)
+                    except ContinueLoop:
+                        options_enabled = False
+                        continue
                 else:
-                    # This is the initial '-'
-                    self.parsed_args.append([arg[0]])
-                    for subindex, option in enumerate(arg[1:]):
-                        try:
-                            optargholder = self.shortflag_to_optargholder[
-                                                                        option]
-                        except KeyError:
-                            raise UnknownArgumentError(arg)
-                        else:
-                            current_argument = optargholder
-                            # Add 1 to subindex because the initial prefix
-                            # (e.g. '-') must be taken into account
-                            current_argument.store_index((index, subindex + 1))
-                            optargholder.action.process_flag()
-                            # Add 2 to subindex because the initial prefix
-                            # (e.g. '-') must be taken into account
-                            value = arg[subindex + 2:]
-                            if value == '':
-                                # This is the last short option 'o'
-                                self.parsed_args[-1].append(option)
-                            elif value[0] == self.OPT_SEP:
-                                value = value[1:]
-                                if value:
-                                    # optargholder can raise
-                                    # UnwantedValueError, but in this case it
-                                    # shouldn't be caught
-                                    optargholder.action.store_value(value)
-                                    # This is the short option 'o=value'
-                                    # Add 1 to subindex because the initial
-                                    # prefix (e.g. '-') must be taken into
-                                    # account
-                                    self.parsed_args[-1].append(
-                                                            arg[subindex + 1:])
-                                    # Set 'options_enabled' here, *before* the
-                                    # 'break'
-                                    if optargholder.nargs is REMAINDER:
-                                        options_enabled = False
-                                    break
-                                else:
-                                    # The option ends with the separator,
-                                    # without a value (ambiguous, better not
-                                    # allow it)
-                                    # TODO: But does argparse support this?
-                                    raise InvalidArgumentError(arg)
-                            else:
-                                try:
-                                    optargholder.action.store_value(value)
-                                except UnwantedValueError:
-                                    # This is the short option 'o'
-                                    self.parsed_args[-1].append(option)
-                                else:
-                                    # This is the short option 'ovalue'
-                                    # Add 1 to subindex because the initial
-                                    # prefix (e.g. '-') must be taken into
-                                    # account
-                                    self.parsed_args[-1].append(
-                                                            arg[subindex + 1:])
-                                    # Set 'options_enabled' here, *before* the
-                                    # 'break'
-                                    if optargholder.nargs is REMAINDER:
-                                        options_enabled = False
-                                    break
-                            # This is reached if no 'break' has been
-                            # enctountered
-                            if optargholder.nargs is REMAINDER:
-                                options_enabled = False
+                    current_argument, options_enabled = \
+                                self._parse_short_flag_cluster(
+                                                index, arg, current_argument,
+                                                options_enabled)
             else:
-                self.parsed_args.append(arg)
-                try:
-                    current_argument.action.store_value(arg)
-                except UnwantedValueError:
-                    try:
-                        current_argument = self.posargholders[
-                                                        current_posarg_index]
-                    except IndexError:
-                        # This can be raised if e.g. there's only one optional
-                        # '-O' argument defined and no positional ones, and the
-                        # command-line arguments are e.g. '-O val1 val2'
-                        raise UnknownArgumentError(arg)
-                    else:
-                        try:
-                            current_argument.action.store_value(arg)
-                        except UnwantedValueError:
-                            current_posarg_index += 1
-                            try:
-                                current_argument = self.posargholders[
-                                                        current_posarg_index]
-                            except IndexError:
-                                raise UnknownArgumentError(arg)
-                            else:
-                                current_argument.action.store_value(arg)
-                                if current_argument.nargs is REMAINDER:
-                                    options_enabled = False
-                except AttributeError:
-                    # AttributeError could be raised if current_argument is
-                    #  None, which can happen at the first loop if there are
-                    #  no defined positional arguments
-                    raise UnknownArgumentError(arg)
-                current_argument.store_index(index)
+                current_argument, options_enabled, current_posarg_index = \
+                        self._parse_value(index, arg, current_argument,
+                                          options_enabled,
+                                          current_posarg_index)
 
         # TODO: Do the positional arguments have to be parsed in a second loop,
         #       so that the various nargs settings can be properly honored?
@@ -742,6 +632,143 @@ class ArgumentParser:
         #       separate Namespace object
         self._check_and_compose_namespace(namespace)
         return self.namespace
+
+    def _parse_long_flag(self, index, arg, current_argument, options_enabled,
+                         ContinueLoop):
+        name, sep, value = arg[2:].partition(self.OPT_SEP)
+        try:
+            optargholder = self.longflag_to_optargholder[name]
+        except KeyError:
+            if len(arg) == 2:
+                # This is the special '--' option
+                self.parsed_args.append(arg)
+                raise ContinueLoop()
+            else:
+                raise UnknownArgumentError(arg)
+        else:
+            current_argument = optargholder
+            current_argument.store_index(index)
+            optargholder.action.process_flag()
+            if sep:
+                if value:
+                    # optargholder can raise UnwantedValueError,
+                    # but in this case it shouldn't be caught
+                    optargholder.action.store_value(value)
+                else:
+                    # The option ends with the separator, without
+                    # a value (ambiguous, better not allow it)
+                    # TODO: But does argparse support this?
+                    raise InvalidArgumentError(arg)
+            if optargholder.nargs is REMAINDER:
+                options_enabled = False
+            # This is '--option' or '--option=value'
+            self.parsed_args.append(arg)
+
+        return (current_argument, options_enabled)
+
+    def _parse_short_flag_cluster(self, index, arg, current_argument,
+                                  options_enabled):
+        # This is the initial '-'
+        self.parsed_args.append([arg[0]])
+        for subindex, option in enumerate(arg[1:]):
+            try:
+                optargholder = self.shortflag_to_optargholder[option]
+            except KeyError:
+                raise UnknownArgumentError(arg)
+            else:
+                current_argument = optargholder
+                # Add 1 to subindex because the initial prefix
+                # (e.g. '-') must be taken into account
+                current_argument.store_index((index, subindex + 1))
+                optargholder.action.process_flag()
+                # Add 2 to subindex because the initial prefix
+                # (e.g. '-') must be taken into account
+                value = arg[subindex + 2:]
+                if value == '':
+                    # This is the last short option 'o'
+                    self.parsed_args[-1].append(option)
+                elif value[0] == self.OPT_SEP:
+                    value = value[1:]
+                    if value:
+                        # optargholder can raise
+                        # UnwantedValueError, but in this case it
+                        # shouldn't be caught
+                        optargholder.action.store_value(value)
+                        # This is the short option 'o=value'
+                        # Add 1 to subindex because the initial
+                        # prefix (e.g. '-') must be taken into
+                        # account
+                        self.parsed_args[-1].append(arg[subindex + 1:])
+                        # Set 'options_enabled' here, *before* the
+                        # 'break'
+                        if optargholder.nargs is REMAINDER:
+                            options_enabled = False
+                        break
+                    else:
+                        # The option ends with the separator,
+                        # without a value (ambiguous, better not
+                        # allow it)
+                        # TODO: But does argparse support this?
+                        raise InvalidArgumentError(arg)
+                else:
+                    try:
+                        optargholder.action.store_value(value)
+                    except UnwantedValueError:
+                        # This is the short option 'o'
+                        self.parsed_args[-1].append(option)
+                    else:
+                        # This is the short option 'ovalue'
+                        # Add 1 to subindex because the initial
+                        # prefix (e.g. '-') must be taken into
+                        # account
+                        self.parsed_args[-1].append(arg[subindex + 1:])
+                        # Set 'options_enabled' here, *before* the
+                        # 'break'
+                        if optargholder.nargs is REMAINDER:
+                            options_enabled = False
+                        break
+                # This is reached if no 'break' has been
+                # enctountered
+                if optargholder.nargs is REMAINDER:
+                    options_enabled = False
+
+        return (current_argument, options_enabled)
+
+    def _parse_value(self, index, arg, current_argument, options_enabled,
+                     current_posarg_index):
+        self.parsed_args.append(arg)
+        try:
+            current_argument.action.store_value(arg)
+        except UnwantedValueError:
+            try:
+                current_argument = self.posargholders[current_posarg_index]
+            except IndexError:
+                # This can be raised if e.g. there's only one optional
+                # '-O' argument defined and no positional ones, and the
+                # command-line arguments are e.g. '-O val1 val2'
+                raise UnknownArgumentError(arg)
+            else:
+                try:
+                    current_argument.action.store_value(arg)
+                except UnwantedValueError:
+                    current_posarg_index += 1
+                    try:
+                        current_argument = self.posargholders[
+                                                        current_posarg_index]
+                    except IndexError:
+                        raise UnknownArgumentError(arg)
+                    else:
+                        current_argument.action.store_value(arg)
+                        if current_argument.nargs is REMAINDER:
+                            options_enabled = False
+        except AttributeError:
+            # AttributeError could be raised if current_argument is
+            #  None, which can happen at the first loop if there are
+            #  no defined positional arguments
+            raise UnknownArgumentError(arg)
+        current_argument.store_index(index)
+
+        return (current_argument, options_enabled, current_posarg_index)
 
     def _check_and_compose_namespace(self, namespace):
         if namespace is not None:
