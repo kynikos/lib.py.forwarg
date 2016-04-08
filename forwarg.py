@@ -58,6 +58,10 @@ class Action:
         raise NotImplementedError()
 
     def store_value(self, newvalue):
+        # TODO: This is still a big difference from argparse: all the parsing
+        #       results are stored directly in parser's attributes, while
+        #       argparse keeps the parser clean, and stores the results in a
+        #       separate Namespace object
         self._store_value(newvalue)
         # Increment this only after _store_value, which could raise the
         # UnwantedValueError exception, thus not storing the value
@@ -491,12 +495,11 @@ class ArgumentParser:
         self.longflag_to_optargholder = {}
         self.shortflag_to_optargholder = {}
 
-        self.parsed_args = []
         # TODO: This is still a big difference from argparse: all the parsing
         #       results are stored directly in parser's attributes, while
         #       argparse keeps the parser clean, and stores the results in a
         #       separate Namespace object
-        self.namespace = Namespace()
+        self.parsed_args = []
 
     def add_argument_group(self, title=None, description=None):
         # TODO: asserting isn't the best way to validate arguments...
@@ -626,12 +629,9 @@ class ArgumentParser:
         #       to the various argument holders according to the number of
         #       characters in each match group.
 
-        # TODO: This is still a big difference from argparse: all the parsing
-        #       results are stored directly in parser's attributes, while
-        #       argparse keeps the parser clean, and stores the results in a
-        #       separate Namespace object
-        self._check_and_compose_namespace(namespace)
-        return self.namespace
+        # Return namespace for compatibility with argparse, but when possible
+        # use the other attributes that store arguments and their parsed values
+        return self._check_and_compose_namespace(namespace)
 
     def _parse_long_flag(self, index, arg, current_argument, options_enabled,
                          ContinueLoop):
@@ -771,20 +771,31 @@ class ArgumentParser:
         return (current_argument, options_enabled, current_posarg_index)
 
     def _check_and_compose_namespace(self, namespace):
-        if namespace is not None:
+        # Don't store namespace as a parser's attribute, otherwise it should be
+        # kept in sync with the other attributes
+        # TODO: This is still a big difference from argparse: all the parsing
+        #       results are stored directly in parser's attributes, while
+        #       argparse keeps the parser clean, and stores the results in a
+        #       separate Namespace object
+
+        if namespace is None:
+            namespace = Namespace()
+        else:
             # TODO: asserting isn't the best way to validate arguments...
             assert isinstance(namespace, Namespace)
-            self.namespace = namespace
 
         for dest in self.dest_to_argholder:
             argholder = self.dest_to_argholder[dest]
             argholder.action.check_value()
-            # namespace could have been passed with already some attributes
-            # from another parser, so check that they are not overwritten
+            # namespace could have been passed to parse_args with already some
+            # attributes from another parser, so check that they are not
+            # overwritten
             # TODO: asserting isn't the best way to validate arguments...
-            assert not hasattr(self.namespace, dest)
+            assert not hasattr(namespace, dest)
             if argholder.default is not SUPPRESS:
-                setattr(self.namespace, dest, argholder.value)
+                setattr(namespace, dest, argholder.value)
+
+        return namespace
 
 
 class ForwargError(Exception):
