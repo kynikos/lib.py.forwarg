@@ -32,7 +32,8 @@ SUPPRESS = object()
 
 
 class Action:
-    def __init__(self, argholder):
+    def __init__(self, argdef, argholder):
+        self.argdef = argdef
         self.argholder = argholder
 
     def process_flag(self):
@@ -49,10 +50,6 @@ class Action:
         self._process_flag()
         # Increment this only after _process_flag, for consistency with
         # store_value below
-        # TODO: This is still a big difference from argparse: all the parsing
-        #       results are stored directly in parser's attributes, while
-        #       argparse keeps the parser clean, and stores the results in a
-        #       separate Namespace object
         self.argholder.number_of_parsed_flags += 1
         self.argholder.number_of_parsed_values_for_current_flag = 0
 
@@ -62,10 +59,6 @@ class Action:
         raise NotImplementedError()
 
     def store_value(self, newvalue):
-        # TODO: This is still a big difference from argparse: all the parsing
-        #       results are stored directly in parser's attributes, while
-        #       argparse keeps the parser clean, and stores the results in a
-        #       separate Namespace object
         self._store_value(newvalue)
         # Increment this only after _store_value, which could raise the
         # UnwantedValueError exception, thus not storing the value
@@ -80,20 +73,23 @@ class Action:
     def check_value(self):
         raise NotImplementedError()
 
+    def store_index(self, index):
+        self.argholder.parsed_arg_indices.append(index)
+
 
 class _ActionStore(Action):
     def check_value(self):
         # This method is overridden by at least ActionStoreConst
-        nargs = self.argholder.nargs
+        nargs = self.argdef.nargs
 
         if self.argholder.number_of_parsed_flags > 0 or isinstance(
-                                self.argholder, PositionalArgumentDefinition):
+                                self.argdef, PositionalArgumentDefinition):
             if nargs in (None, '+', REMAINDER):
                 if self.argholder.number_of_parsed_values_for_current_flag < 1:
-                    raise InsufficientArgumentsError(self.argholder.dest)
+                    raise InsufficientArgumentsError(self.argdef.dest)
             elif isinstance(nargs, int):
                 if self.argholder.number_of_parsed_values_for_current_flag < nargs:  # NOQA
-                    raise InsufficientArgumentsError(self.argholder.dest)
+                    raise InsufficientArgumentsError(self.argdef.dest)
             # TODO: How does argparse behave if an option has nargs == '*' but
             #       no value is passed in the command line?
             elif nargs == '?':
@@ -105,9 +101,9 @@ class _ActionStore(Action):
 
 
 class ActionStore(_ActionStore):
-    def __init__(self, argholder):
-        super().__init__(argholder)
-        nargs = self.argholder.nargs
+    def __init__(self, argdef, argholder):
+        super().__init__(argdef, argholder)
+        nargs = self.argdef.nargs
         if nargs in (None, '?'):
             self._process_flag = self._dummy
             self._store_value = self._override
@@ -136,7 +132,7 @@ class ActionStore(_ActionStore):
 
     def _append_limited(self, newvalue):
         if self.argholder.number_of_parsed_values_for_current_flag >= \
-                                                        self.argholder.nargs:
+                                                        self.argdef.nargs:
             raise UnwantedValueError(newvalue)
         self._append_unlimited(newvalue)
 
@@ -147,13 +143,13 @@ class ActionStore(_ActionStore):
             self.argholder.value.append(newvalue)
 
     def _default_to_const(self):
-        self.argholder.value = self.argholder.const
+        self.argholder.value = self.argdef.const
 
 
 class ActionAppend(_ActionStore):
-    def __init__(self, argholder):
-        super().__init__(argholder)
-        nargs = self.argholder.nargs
+    def __init__(self, argdef, argholder):
+        super().__init__(argdef, argholder)
+        nargs = self.argdef.nargs
         if nargs in (None, '?'):
             self._store_value = self._append_plain
         elif isinstance(nargs, int) and nargs > -1:
@@ -179,7 +175,7 @@ class ActionAppend(_ActionStore):
 
     def _append_nested_limited(self, newvalue):
         if self.argholder.number_of_parsed_values_for_current_flag >= \
-                                                        self.argholder.nargs:
+                                                        self.argdef.nargs:
             raise UnwantedValueError(newvalue)
         self._append_nested_unlimited(newvalue)
 
@@ -192,19 +188,19 @@ class ActionAppend(_ActionStore):
             self.argholder.value[-1].append(newvalue)
 
     def _default_to_const(self):
-        self._append_plain(self.argholder.const)
+        self._append_plain(self.argdef.const)
 
 
 class ActionStoreConst(Action):
-    def __init__(self, argholder):
-        super().__init__(argholder)
+    def __init__(self, argdef, argholder):
+        super().__init__(argdef, argholder)
         # TODO: Does argparse ignore nargs in this action?
-        if self.argholder.nargs is not None:
-            raise UnrecognizedNargsError(self.argholder.nargs)
+        if self.argdef.nargs is not None:
+            raise UnrecognizedNargsError(self.argdef.nargs)
 
     def _process_flag(self):
         # TODO: Raise an error if the option has already been specified?
-        self.argholder.value = self.argholder.const
+        self.argholder.value = self.argdef.const
 
     def _store_value(self, newvalue):
         raise UnwantedValueError(newvalue)
@@ -230,9 +226,9 @@ class ActionStoreFalse(ActionStoreConst):
 class ActionAppendConst(ActionStoreConst):
     def _process_flag(self):
         try:
-            self.argholder.value.append(self.argholder.const)
+            self.argholder.value.append(self.argdef.const)
         except TypeError:
-            self.argholder.value = [self.argholder.const]
+            self.argholder.value = [self.argdef.const]
 
 
 class ActionCount(ActionStoreConst):
@@ -337,7 +333,9 @@ class _ArgumentDefinition:
             # TODO: Required when using action='version'
             raise NotImplementedError()
 
-        # nargs is validated when instantiating action
+        # TODO: currently nargs is only validated when instantiating action,
+        #       i.e. at parse time, but it should be validated now at
+        #       definition time
         self.nargs = nargs
         self.const = const
         self.default = default
@@ -348,22 +346,11 @@ class _ArgumentDefinition:
         # TODO: Also support argparse's Action classes? Otherwise warn that
         #       they aren't supported
         try:
-            Action_ = self.ACTIONS[action]
+            self.action = self.ACTIONS[action]
         except KeyError:
             # TODO: asserting isn't the best way to validate arguments...
             assert issubclass(action, Action)
-            Action_ = action
-        self.action = Action_(self)
-
-        # TODO: This is still a big difference from argparse: all the parsing
-        #       results are stored directly in parser's attributes, while
-        #       argparse keeps the parser clean, and stores the results in a
-        #       separate Namespace object
-        self.number_of_parsed_flags = 0
-        self.number_of_parsed_values_for_all_flags = 0
-        self.number_of_parsed_values_for_current_flag = 0
-        self.parsed_arg_indices = []
-        self.value = self.default
+            self.action = action
 
     def set_group(self, group):
         self.group = group
@@ -381,12 +368,8 @@ class _ArgumentDefinition:
 
         return dest
 
-    def store_index(self, index):
-        # TODO: This is still a big difference from argparse: all the parsing
-        #       results are stored directly in parser's attributes, while
-        #       argparse keeps the parser clean, and stores the results in a
-        #       separate Namespace object
-        self.parsed_arg_indices.append(index)
+    def create_parsed_values_holder(self, parsedargs):
+        return _ArgumentHolder(self, parsedargs)
 
 
 class OptionalArgumentDefinition(_ArgumentDefinition):
@@ -451,6 +434,19 @@ class PositionalArgumentDefinition(_ArgumentDefinition):
         self.parser.posargdefs.append(self)
 
 
+class _ArgumentHolder:
+    def __init__(self, argdef, parsedargs):
+        self.argdef = argdef
+        self.parsedargs = parsedargs
+
+        self.action = self.argdef.action(argdef, self)
+        self.number_of_parsed_flags = 0
+        self.number_of_parsed_values_for_all_flags = 0
+        self.number_of_parsed_values_for_current_flag = 0
+        self.parsed_arg_indices = []
+        self.value = self.argdef.default
+
+
 class ParsedArguments:
     # Keep the parse results separate from the generic argument definitions, so
     # that more command lines can be parsed with the same parser object
@@ -466,21 +462,27 @@ class ParsedArguments:
             assert isinstance(namespace, Namespace)
             self._namespace = namespace
 
-        self.parsed = []
+        self.argdef_to_argholder = {}
+        for argdef in self.parser.dest_to_argdef.values():
+            self.argdef_to_argholder[argdef] = \
+                                    argdef.create_parsed_values_holder(self)
+
+        self.splitline = []
 
     @property
     def namespace(self):
-        # TODO: Create the namespace normally while storing the values, instead
-        #       of using a property
-        for dest in self.parser.dest_to_argdef:
-            argdef = self.parser.dest_to_argdef[dest]
+        # This property exists only for backward compatibility with argparse;
+        # when possible, read the values directly from the argument holoder's
+        # attributes
+        for argdef in self.argdef_to_argholder:
             # namespace could have been initialized in the constructor with
             # already some # attributes from another parser, so check that they
             # are not overwritten
             # TODO: asserting isn't the best way to validate arguments...
-            assert not hasattr(self._namespace, dest)
+            assert not hasattr(self._namespace, argdef.dest)
             if argdef.default is not SUPPRESS:
-                setattr(self._namespace, dest, argdef.value)
+                setattr(self._namespace, argdef.dest,
+                        self.argdef_to_argholder[argdef].value)
 
         return self._namespace
 
@@ -597,37 +599,38 @@ class ArgumentParser:
         parsedargs = ParsedArguments(self, namespace)
         current_posarg_index = 0
         try:
-            current_argument = self.posargdefs[current_posarg_index]
+            current_argholder = parsedargs.argdef_to_argholder[self.posargdefs[
+                                                        current_posarg_index]]
         except IndexError:
             # There may not be any positional arguments defined
-            current_argument = None
+            current_argholder = None
             options_enabled = True
         else:
-            options_enabled = current_argument.nargs is not REMAINDER
+            options_enabled = current_argholder.argdef.nargs is not REMAINDER
         ContinueLoop = type('ContinueLoop', (Exception, ), {})
 
         for index, arg in enumerate(args):
             if options_enabled and arg[0] in self.prefix_chars:
                 if arg[1] in self.prefix_chars:
                     try:
-                        current_argument, options_enabled = \
+                        current_argholder, options_enabled = \
                             self._parse_long_flag(parsedargs, index, arg,
-                                                  current_argument,
+                                                  current_argholder,
                                                   options_enabled,
                                                   ContinueLoop)
                     except ContinueLoop:
                         options_enabled = False
                         continue
                 else:
-                    current_argument, options_enabled = \
+                    current_argholder, options_enabled = \
                                 self._parse_short_flag_cluster(
                                                 parsedargs, index, arg,
-                                                current_argument,
+                                                current_argholder,
                                                 options_enabled)
             else:
-                current_argument, options_enabled, current_posarg_index = \
+                current_argholder, options_enabled, current_posarg_index = \
                         self._parse_value(parsedargs, index, arg,
-                                          current_argument, options_enabled,
+                                          current_argholder, options_enabled,
                                           current_posarg_index)
 
         # TODO: Do the positional arguments have to be parsed in a second loop,
@@ -641,7 +644,7 @@ class ArgumentParser:
         #       values to the various argument parsed-value holders according
         #       to the number of characters in each match group.
 
-        for argholder in self.dest_to_argdef.values():
+        for argholder in parsedargs.argdef_to_argholder.values():
             argholder.action.check_value()
 
         # For backward compatibility with argparse, parsedargs.namespace should
@@ -649,76 +652,77 @@ class ArgumentParser:
         # TODO: document this difference
         return parsedargs
 
-    def _parse_long_flag(self, parsedargs, index, arg, current_argument,
+    def _parse_long_flag(self, parsedargs, index, arg, current_argholder,
                          options_enabled, ContinueLoop):
         name, sep, value = arg[2:].partition(self.OPT_SEP)
         try:
-            optargholder = self.longflag_to_optargdef[name]
+            argdef = self.longflag_to_optargdef[name]
         except KeyError:
             if len(arg) == 2:
                 # This is the special '--' option
-                parsedargs.parsed.append((arg, None))
+                parsedargs.splitline.append((arg, None))
                 raise ContinueLoop()
             else:
                 raise UnknownArgumentError(arg)
         else:
-            current_argument = optargholder
-            current_argument.store_index(index)
-            optargholder.action.process_flag()
+            current_argholder = parsedargs.argdef_to_argholder[argdef]
+            current_argholder.action.store_index(index)
+            current_argholder.action.process_flag()
             if sep:
                 if value:
-                    # optargholder can raise UnwantedValueError,
+                    # current_argholder can raise UnwantedValueError,
                     # but in this case it shouldn't be caught
-                    optargholder.action.store_value(value)
+                    current_argholder.action.store_value(value)
                 else:
                     # The option ends with the separator, without
                     # a value (ambiguous, better not allow it)
                     # TODO: But does argparse support this?
                     raise InvalidArgumentError(arg)
-            if optargholder.nargs is REMAINDER:
+            if argdef.nargs is REMAINDER:
                 options_enabled = False
             # This is '--option' or '--option=value'
-            parsedargs.parsed.append((arg, optargholder))
+            parsedargs.splitline.append((arg, current_argholder))
 
-        return (current_argument, options_enabled)
+        return (current_argholder, options_enabled)
 
     def _parse_short_flag_cluster(self, parsedargs, index, arg,
-                                  current_argument, options_enabled):
+                                  current_argholder, options_enabled):
         # This is the initial '-'
-        parsedargs.parsed.append([(arg[0], None)])
+        parsedargs.splitline.append([(arg[0], None)])
         for subindex, option in enumerate(arg[1:]):
             try:
-                optargholder = self.shortflag_to_optargdef[option]
+                argdef = self.shortflag_to_optargdef[option]
             except KeyError:
                 raise UnknownArgumentError(arg)
             else:
-                current_argument = optargholder
+                current_argholder = parsedargs.argdef_to_argholder[argdef]
                 # Add 1 to subindex because the initial prefix
                 # (e.g. '-') must be taken into account
-                current_argument.store_index((index, subindex + 1))
-                optargholder.action.process_flag()
+                current_argholder.action.store_index((index, subindex + 1))
+                current_argholder.action.process_flag()
                 # Add 2 to subindex because the initial prefix
                 # (e.g. '-') must be taken into account
                 value = arg[subindex + 2:]
                 if value == '':
                     # This is the last short option 'o'
-                    parsedargs.parsed[-1].append((option, optargholder))
+                    parsedargs.splitline[-1].append((option,
+                                                     current_argholder))
                 elif value[0] == self.OPT_SEP:
                     value = value[1:]
                     if value:
-                        # optargholder can raise
+                        # current_argholder can raise
                         # UnwantedValueError, but in this case it
                         # shouldn't be caught
-                        optargholder.action.store_value(value)
+                        current_argholder.action.store_value(value)
                         # This is the short option 'o=value'
                         # Add 1 to subindex because the initial
                         # prefix (e.g. '-') must be taken into
                         # account
-                        parsedargs.parsed[-1].append((arg[subindex + 1:],
-                                                      optargholder))
+                        parsedargs.splitline[-1].append((arg[subindex + 1:],
+                                                         current_argholder))
                         # Set 'options_enabled' here, *before* the
                         # 'break'
-                        if optargholder.nargs is REMAINDER:
+                        if argdef.nargs is REMAINDER:
                             options_enabled = False
                         break
                     else:
@@ -729,36 +733,38 @@ class ArgumentParser:
                         raise InvalidArgumentError(arg)
                 else:
                     try:
-                        optargholder.action.store_value(value)
+                        current_argholder.action.store_value(value)
                     except UnwantedValueError:
                         # This is the short option 'o'
-                        parsedargs.parsed[-1].append((option, optargholder))
+                        parsedargs.splitline[-1].append((option,
+                                                         current_argholder))
                     else:
                         # This is the short option 'ovalue'
                         # Add 1 to subindex because the initial
                         # prefix (e.g. '-') must be taken into
                         # account
-                        parsedargs.parsed[-1].append((arg[subindex + 1:],
-                                                      optargholder))
+                        parsedargs.splitline[-1].append((arg[subindex + 1:],
+                                                         current_argholder))
                         # Set 'options_enabled' here, *before* the
                         # 'break'
-                        if optargholder.nargs is REMAINDER:
+                        if argdef.nargs is REMAINDER:
                             options_enabled = False
                         break
                 # This is reached if no 'break' has been
                 # enctountered
-                if optargholder.nargs is REMAINDER:
+                if argdef.nargs is REMAINDER:
                     options_enabled = False
 
-        return (current_argument, options_enabled)
+        return (current_argholder, options_enabled)
 
-    def _parse_value(self, parsedargs, index, arg, current_argument,
+    def _parse_value(self, parsedargs, index, arg, current_argholder,
                      options_enabled, current_posarg_index):
         try:
-            current_argument.action.store_value(arg)
+            current_argholder.action.store_value(arg)
         except UnwantedValueError:
             try:
-                current_argument = self.posargdefs[current_posarg_index]
+                current_argholder = parsedargs.argdef_to_argholder[
+                                        self.posargdefs[current_posarg_index]]
             except IndexError:
                 # This can be raised if e.g. there's only one optional
                 # '-O' argument defined and no positional ones, and the
@@ -766,27 +772,28 @@ class ArgumentParser:
                 raise UnknownArgumentError(arg)
             else:
                 try:
-                    current_argument.action.store_value(arg)
+                    current_argholder.action.store_value(arg)
                 except UnwantedValueError:
                     current_posarg_index += 1
                     try:
-                        current_argument = self.posargdefs[
-                                                        current_posarg_index]
+                        argdef = self.posargdefs[current_posarg_index]
                     except IndexError:
                         raise UnknownArgumentError(arg)
                     else:
-                        current_argument.action.store_value(arg)
-                        if current_argument.nargs is REMAINDER:
+                        current_argholder = parsedargs.argdef_to_argholder[
+                                                                        argdef]
+                        current_argholder.action.store_value(arg)
+                        if argdef.nargs is REMAINDER:
                             options_enabled = False
         except AttributeError:
-            # AttributeError could be raised if current_argument is
+            # AttributeError could be raised if current_argholder is
             #  None, which can happen at the first loop if there are
             #  no defined positional arguments
             raise UnknownArgumentError(arg)
-        parsedargs.parsed.append((arg, current_argument))
-        current_argument.store_index(index)
+        parsedargs.splitline.append((arg, current_argholder))
+        current_argholder.action.store_index(index)
 
-        return (current_argument, options_enabled, current_posarg_index)
+        return (current_argholder, options_enabled, current_posarg_index)
 
 
 class ForwargError(Exception):
