@@ -87,7 +87,7 @@ class _ActionStore(Action):
         nargs = self.argholder.nargs
 
         if self.argholder.number_of_parsed_flags > 0 or isinstance(
-                                    self.argholder, PositionalArgumentHolder):
+                                self.argholder, PositionalArgumentDefinition):
             if nargs in (None, '+', REMAINDER):
                 if self.argholder.number_of_parsed_values_for_current_flag < 1:
                     raise InsufficientArgumentsError(self.argholder.dest)
@@ -253,30 +253,30 @@ class ActionVersion(Action):
     pass
 
 
-class ArgumentHolderGroup:
+class ArgumentDefinitionsGroup:
     def __init__(self, parser, title, description):
         self.parser = parser
         self.title = title
         self.description = description
-        self.dest_to_argholder = OrderedDict()
+        self.dest_to_argdef = OrderedDict()
 
     def add_argument(self, *nameorflags, action='store', nargs=None,
                      const=None, default=None, type=None, choices=None,
                      required=None, help=None, metavar=None, dest=None,
                      version=None):
-        argholder = _ArgumentHolder.create(
+        argdef = _ArgumentDefinition.create(
                 self.parser, nameorflags, action, nargs, const, default, type,
                 choices, required, help, metavar, dest, version)
-        self.do_add_argument(argholder)
-        return argholder
+        self.do_add_argument(argdef)
+        return argdef
 
-    def do_add_argument(self, argholder):
-        argholder.set_group(self)
-        self.dest_to_argholder[argholder.dest] = argholder
-        self.parser.dest_to_argholder[argholder.dest] = argholder
+    def do_add_argument(self, argdef):
+        argdef.set_group(self)
+        self.dest_to_argdef[argdef.dest] = argdef
+        self.parser.dest_to_argdef[argdef.dest] = argdef
 
 
-class _ArgumentHolder:
+class _ArgumentDefinition:
     ACTIONS = {
             'store': ActionStore,
             'store_const': ActionStoreConst,
@@ -299,7 +299,7 @@ class _ArgumentHolder:
         assert isinstance(dest, str) or dest is None
 
         try:
-            return OptionalArgumentHolder(
+            return OptionalArgumentDefinition(
                             parser, nameorflags,
                             action=action, nargs=nargs, const=const,
                             default=default, type=type, choices=choices,
@@ -308,7 +308,7 @@ class _ArgumentHolder:
         except InvalidArgumentNameError:
             if len(nameorflags) > 1:
                 raise MultiplePositionalArgumentNamesError(nameorflags)
-            return PositionalArgumentHolder(
+            return PositionalArgumentDefinition(
                             parser, nameorflags,
                             action=action, nargs=nargs, const=const,
                             default=default, type=type, choices=choices,
@@ -376,7 +376,7 @@ class _ArgumentHolder:
 
         # TODO: actually, at least the 'append_const' action requires 'dest'
         #       to be defined by more than an option
-        if dest in parser.dest_to_argholder:
+        if dest in parser.dest_to_argdef:
             raise ExistingArgumentError(dest)
 
         return dest
@@ -389,7 +389,7 @@ class _ArgumentHolder:
         self.parsed_arg_indices.append(index)
 
 
-class OptionalArgumentHolder(_ArgumentHolder):
+class OptionalArgumentDefinition(_ArgumentDefinition):
     def __init__(self, parser, nameorflags, action, nargs, const,
                  default, type, choices, required, help, metavar, dest,
                  version):
@@ -400,11 +400,11 @@ class OptionalArgumentHolder(_ArgumentHolder):
             if not isinstance(flag, str):
                 raise InvalidArgumentNameError(flag)
             if _m_re.fullmatch(parser.longopt_arg_re, flag):
-                if flag[2:] in parser.longflag_to_optargholder:
+                if flag[2:] in parser.longflag_to_optargdef:
                     raise ExistingArgumentError(flag)
                 self.longflags.append(flag[2:])
             elif _m_re.fullmatch(parser.shortopt_arg_re, flag):
-                if flag[1:] in parser.shortflag_to_optargholder:
+                if flag[1:] in parser.shortflag_to_optargdef:
                     raise ExistingArgumentError(flag)
                 self.shortflags.append(flag[1:])
             else:
@@ -419,12 +419,12 @@ class OptionalArgumentHolder(_ArgumentHolder):
 
         # Reference the object only after the whole validation
         for flag in self.longflags:
-            self.parser.longflag_to_optargholder[flag] = self
+            self.parser.longflag_to_optargdef[flag] = self
         for flag in self.shortflags:
-            self.parser.shortflag_to_optargholder[flag] = self
+            self.parser.shortflag_to_optargdef[flag] = self
 
 
-class PositionalArgumentHolder(_ArgumentHolder):
+class PositionalArgumentDefinition(_ArgumentDefinition):
     def __init__(self, parser, nameorflags, action, nargs, const,
                  default, type, choices, required, help, metavar, dest,
                  version):
@@ -433,7 +433,7 @@ class PositionalArgumentHolder(_ArgumentHolder):
         if not isinstance(self.name, str) or \
                 not _m_re.fullmatch(parser.pos_arg_re, self.name):
             raise InvalidArgumentNameError(self.name)
-        if self.name in parser.name_to_posargholder:
+        if self.name in parser.name_to_posargdef:
             raise ExistingArgumentError(self.name)
 
         # TODO: actions other than 'store' don't make sense for positional
@@ -447,12 +447,12 @@ class PositionalArgumentHolder(_ArgumentHolder):
                          metavar=metavar, dest=dest, version=version)
 
         # Reference the object only after the whole validation
-        self.parser.name_to_posargholder[self.name] = self
-        self.parser.posargholders.append(self)
+        self.parser.name_to_posargdef[self.name] = self
+        self.parser.posargdefs.append(self)
 
 
 class ParsedArguments:
-    # Keep the parse results separate from the generic argument holders, so
+    # Keep the parse results separate from the generic argument definitions, so
     # that more command lines can be parsed with the same parser object
     # This behavior is consistent with argparse; the namespace attribute is
     # analogous to argparse's parse_args return value
@@ -472,15 +472,15 @@ class ParsedArguments:
     def namespace(self):
         # TODO: Create the namespace normally while storing the values, instead
         #       of using a property
-        for dest in self.parser.dest_to_argholder:
-            argholder = self.parser.dest_to_argholder[dest]
+        for dest in self.parser.dest_to_argdef:
+            argdef = self.parser.dest_to_argdef[dest]
             # namespace could have been initialized in the constructor with
             # already some # attributes from another parser, so check that they
             # are not overwritten
             # TODO: asserting isn't the best way to validate arguments...
             assert not hasattr(self._namespace, dest)
-            if argholder.default is not SUPPRESS:
-                setattr(self._namespace, dest, argholder.value)
+            if argdef.default is not SUPPRESS:
+                setattr(self._namespace, dest, argdef.value)
 
         return self._namespace
 
@@ -537,11 +537,11 @@ class ArgumentParser:
                                                             self.prefix_chars))
 
         self.title_to_group = {}
-        self.dest_to_argholder = OrderedDict()
-        self.name_to_posargholder = {}
-        self.posargholders = []
-        self.longflag_to_optargholder = {}
-        self.shortflag_to_optargholder = {}
+        self.dest_to_argdef = OrderedDict()
+        self.name_to_posargdef = {}
+        self.posargdefs = []
+        self.longflag_to_optargdef = {}
+        self.shortflag_to_optargdef = {}
 
     def add_argument_group(self, title=None, description=None):
         # TODO: asserting isn't the best way to validate arguments...
@@ -555,7 +555,7 @@ class ArgumentParser:
         if title in self.title_to_group:
             raise ExistingArgumentGroupError(title)
 
-        group = ArgumentHolderGroup(self, title, description)
+        group = ArgumentDefinitionsGroup(self, title, description)
         self.title_to_group[title] = group
 
         return group
@@ -564,24 +564,24 @@ class ArgumentParser:
                      const=None, default=None, type=None, choices=None,
                      required=None, help=None, metavar=None, dest=None,
                      version=None):
-        argholder = _ArgumentHolder.create(
+        argdef = _ArgumentDefinition.create(
                         self, nameorflags, action, nargs, const, default, type,
                         choices, required, help, metavar, dest, version)
-        if isinstance(argholder, PositionalArgumentHolder):
+        if isinstance(argdef, PositionalArgumentDefinition):
             try:
                 group = self.add_argument_group('positional arguments')
             except ExistingArgumentGroupError:
                 group = self.title_to_group['positional arguments']
-        elif isinstance(argholder, OptionalArgumentHolder):
+        elif isinstance(argdef, OptionalArgumentDefinition):
             try:
                 group = self.add_argument_group('optional arguments')
             except ExistingArgumentGroupError:
                 group = self.title_to_group['optional arguments']
         else:
             # Just in case in the future more argument types were implemented?
-            raise UnknownArgumentType(argholder.dest)
-        group.do_add_argument(argholder)
-        return argholder
+            raise UnknownArgumentType(argdef.dest)
+        group.do_add_argument(argdef)
+        return argdef
 
     def parse_args(self, args=None, namespace=None):
         # Don't try to define a parse_known_args method, since there are many
@@ -597,7 +597,7 @@ class ArgumentParser:
         parsedargs = ParsedArguments(self, namespace)
         current_posarg_index = 0
         try:
-            current_argument = self.posargholders[current_posarg_index]
+            current_argument = self.posargdefs[current_posarg_index]
         except IndexError:
             # There may not be any positional arguments defined
             current_argument = None
@@ -637,11 +637,11 @@ class ArgumentParser:
         #       For example compose a string with as many characters as the
         #       number of found positional arguments; then apply the regular
         #       expression qualifiers to it, subdividing it into one group for
-        #       each positional argument holder; then assign the actual values
-        #       to the various argument holders according to the number of
-        #       characters in each match group.
+        #       each positional argument definition; then assign the actual
+        #       values to the various argument parsed-value holders according
+        #       to the number of characters in each match group.
 
-        for argholder in self.dest_to_argholder.values():
+        for argholder in self.dest_to_argdef.values():
             argholder.action.check_value()
 
         # For backward compatibility with argparse, parsedargs.namespace should
@@ -653,7 +653,7 @@ class ArgumentParser:
                          options_enabled, ContinueLoop):
         name, sep, value = arg[2:].partition(self.OPT_SEP)
         try:
-            optargholder = self.longflag_to_optargholder[name]
+            optargholder = self.longflag_to_optargdef[name]
         except KeyError:
             if len(arg) == 2:
                 # This is the special '--' option
@@ -688,7 +688,7 @@ class ArgumentParser:
         parsedargs.parsed.append([(arg[0], None)])
         for subindex, option in enumerate(arg[1:]):
             try:
-                optargholder = self.shortflag_to_optargholder[option]
+                optargholder = self.shortflag_to_optargdef[option]
             except KeyError:
                 raise UnknownArgumentError(arg)
             else:
@@ -758,7 +758,7 @@ class ArgumentParser:
             current_argument.action.store_value(arg)
         except UnwantedValueError:
             try:
-                current_argument = self.posargholders[current_posarg_index]
+                current_argument = self.posargdefs[current_posarg_index]
             except IndexError:
                 # This can be raised if e.g. there's only one optional
                 # '-O' argument defined and no positional ones, and the
@@ -770,7 +770,7 @@ class ArgumentParser:
                 except UnwantedValueError:
                     current_posarg_index += 1
                     try:
-                        current_argument = self.posargholders[
+                        current_argument = self.posargdefs[
                                                         current_posarg_index]
                     except IndexError:
                         raise UnknownArgumentError(arg)
