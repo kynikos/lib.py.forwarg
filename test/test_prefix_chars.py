@@ -16,8 +16,8 @@ def parser(request):
 
 
 def test1(parser):
-    assert parser.parse_args(shlex.split('+O +P')) == _m_argparse.Namespace(
-                                                            O=False, P=True)
+    assert parser.parse_args(shlex.split('+O +P')).namespace == \
+                                        _m_argparse.Namespace(O=False, P=True)
 
 # TODO: Add more tests...
 #       Note that mixing different prefix characters is not fully supported

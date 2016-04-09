@@ -49,6 +49,10 @@ class Action:
         self._process_flag()
         # Increment this only after _process_flag, for consistency with
         # store_value below
+        # TODO: This is still a big difference from argparse: all the parsing
+        #       results are stored directly in parser's attributes, while
+        #       argparse keeps the parser clean, and stores the results in a
+        #       separate Namespace object
         self.argholder.number_of_parsed_flags += 1
         self.argholder.number_of_parsed_values_for_current_flag = 0
 
@@ -351,6 +355,10 @@ class _ArgumentHolder:
             Action_ = action
         self.action = Action_(self)
 
+        # TODO: This is still a big difference from argparse: all the parsing
+        #       results are stored directly in parser's attributes, while
+        #       argparse keeps the parser clean, and stores the results in a
+        #       separate Namespace object
         self.number_of_parsed_flags = 0
         self.number_of_parsed_values_for_all_flags = 0
         self.number_of_parsed_values_for_current_flag = 0
@@ -374,6 +382,10 @@ class _ArgumentHolder:
         return dest
 
     def store_index(self, index):
+        # TODO: This is still a big difference from argparse: all the parsing
+        #       results are stored directly in parser's attributes, while
+        #       argparse keeps the parser clean, and stores the results in a
+        #       separate Namespace object
         self.parsed_arg_indices.append(index)
 
 
@@ -439,6 +451,40 @@ class PositionalArgumentHolder(_ArgumentHolder):
         self.parser.posargholders.append(self)
 
 
+class ParsedArguments:
+    # Keep the parse results separate from the generic argument holders, so
+    # that more command lines can be parsed with the same parser object
+    # This behavior is consistent with argparse; the namespace attribute is
+    # analogous to argparse's parse_args return value
+    def __init__(self, parser, namespace=None):
+        self.parser = parser
+
+        if namespace is None:
+            self._namespace = Namespace()
+        else:
+            # TODO: asserting isn't the best way to validate arguments...
+            assert isinstance(namespace, Namespace)
+            self._namespace = namespace
+
+        self.parsed = []
+
+    @property
+    def namespace(self):
+        # TODO: Create the namespace normally while storing the values, instead
+        #       of using a property
+        for dest in self.parser.dest_to_argholder:
+            argholder = self.parser.dest_to_argholder[dest]
+            # namespace could have been initialized in the constructor with
+            # already some # attributes from another parser, so check that they
+            # are not overwritten
+            # TODO: asserting isn't the best way to validate arguments...
+            assert not hasattr(self._namespace, dest)
+            if argholder.default is not SUPPRESS:
+                setattr(self._namespace, dest, argholder.value)
+
+        return self._namespace
+
+
 class ArgumentParser:
     # Note that isolated sequences of prefix_chars are not supported
     # e.g. '-', '--', '---'
@@ -497,12 +543,6 @@ class ArgumentParser:
         self.longflag_to_optargholder = {}
         self.shortflag_to_optargholder = {}
 
-        # TODO: This is still a big difference from argparse: all the parsing
-        #       results are stored directly in parser's attributes, while
-        #       argparse keeps the parser clean, and stores the results in a
-        #       separate Namespace object
-        self.parsed_args = []
-
     def add_argument_group(self, title=None, description=None):
         # TODO: asserting isn't the best way to validate arguments...
         # TODO: argparse accepts title=None???
@@ -550,11 +590,11 @@ class ArgumentParser:
         # We don't know if '--unknown-option' accepts any values
         # See also http://bugs.python.org/issue16142
 
-        # namespace is validated in _check_and_compose_namespace
-
         # TODO: Check that args is an iterable of strings
         args = _m_sys.argv[1:] if args is None else args
 
+        # namespace is validated in ParsedArguments
+        parsedargs = ParsedArguments(self, namespace)
         current_posarg_index = 0
         try:
             current_argument = self.posargholders[current_posarg_index]
@@ -571,7 +611,8 @@ class ArgumentParser:
                 if arg[1] in self.prefix_chars:
                     try:
                         current_argument, options_enabled = \
-                            self._parse_long_flag(index, arg, current_argument,
+                            self._parse_long_flag(parsedargs, index, arg,
+                                                  current_argument,
                                                   options_enabled,
                                                   ContinueLoop)
                     except ContinueLoop:
@@ -580,12 +621,13 @@ class ArgumentParser:
                 else:
                     current_argument, options_enabled = \
                                 self._parse_short_flag_cluster(
-                                                index, arg, current_argument,
+                                                parsedargs, index, arg,
+                                                current_argument,
                                                 options_enabled)
             else:
                 current_argument, options_enabled, current_posarg_index = \
-                        self._parse_value(index, arg, current_argument,
-                                          options_enabled,
+                        self._parse_value(parsedargs, index, arg,
+                                          current_argument, options_enabled,
                                           current_posarg_index)
 
         # TODO: Do the positional arguments have to be parsed in a second loop,
@@ -599,19 +641,23 @@ class ArgumentParser:
         #       to the various argument holders according to the number of
         #       characters in each match group.
 
-        # Return namespace for compatibility with argparse, but when possible
-        # use the other attributes that store arguments and their parsed values
-        return self._check_and_compose_namespace(namespace)
+        for argholder in self.dest_to_argholder.values():
+            argholder.action.check_value()
 
-    def _parse_long_flag(self, index, arg, current_argument, options_enabled,
-                         ContinueLoop):
+        # For backward compatibility with argparse, parsedargs.namespace should
+        # be returned, but then what would be the point of using forwarg?
+        # TODO: document this difference
+        return parsedargs
+
+    def _parse_long_flag(self, parsedargs, index, arg, current_argument,
+                         options_enabled, ContinueLoop):
         name, sep, value = arg[2:].partition(self.OPT_SEP)
         try:
             optargholder = self.longflag_to_optargholder[name]
         except KeyError:
             if len(arg) == 2:
                 # This is the special '--' option
-                self.parsed_args.append((arg, None))
+                parsedargs.parsed.append((arg, None))
                 raise ContinueLoop()
             else:
                 raise UnknownArgumentError(arg)
@@ -632,14 +678,14 @@ class ArgumentParser:
             if optargholder.nargs is REMAINDER:
                 options_enabled = False
             # This is '--option' or '--option=value'
-            self.parsed_args.append((arg, optargholder))
+            parsedargs.parsed.append((arg, optargholder))
 
         return (current_argument, options_enabled)
 
-    def _parse_short_flag_cluster(self, index, arg, current_argument,
-                                  options_enabled):
+    def _parse_short_flag_cluster(self, parsedargs, index, arg,
+                                  current_argument, options_enabled):
         # This is the initial '-'
-        self.parsed_args.append([(arg[0], None)])
+        parsedargs.parsed.append([(arg[0], None)])
         for subindex, option in enumerate(arg[1:]):
             try:
                 optargholder = self.shortflag_to_optargholder[option]
@@ -656,7 +702,7 @@ class ArgumentParser:
                 value = arg[subindex + 2:]
                 if value == '':
                     # This is the last short option 'o'
-                    self.parsed_args[-1].append((option, optargholder))
+                    parsedargs.parsed[-1].append((option, optargholder))
                 elif value[0] == self.OPT_SEP:
                     value = value[1:]
                     if value:
@@ -668,8 +714,8 @@ class ArgumentParser:
                         # Add 1 to subindex because the initial
                         # prefix (e.g. '-') must be taken into
                         # account
-                        self.parsed_args[-1].append((arg[subindex + 1:],
-                                                     optargholder))
+                        parsedargs.parsed[-1].append((arg[subindex + 1:],
+                                                      optargholder))
                         # Set 'options_enabled' here, *before* the
                         # 'break'
                         if optargholder.nargs is REMAINDER:
@@ -686,14 +732,14 @@ class ArgumentParser:
                         optargholder.action.store_value(value)
                     except UnwantedValueError:
                         # This is the short option 'o'
-                        self.parsed_args[-1].append((option, optargholder))
+                        parsedargs.parsed[-1].append((option, optargholder))
                     else:
                         # This is the short option 'ovalue'
                         # Add 1 to subindex because the initial
                         # prefix (e.g. '-') must be taken into
                         # account
-                        self.parsed_args[-1].append((arg[subindex + 1:],
-                                                     optargholder))
+                        parsedargs.parsed[-1].append((arg[subindex + 1:],
+                                                      optargholder))
                         # Set 'options_enabled' here, *before* the
                         # 'break'
                         if optargholder.nargs is REMAINDER:
@@ -706,8 +752,8 @@ class ArgumentParser:
 
         return (current_argument, options_enabled)
 
-    def _parse_value(self, index, arg, current_argument, options_enabled,
-                     current_posarg_index):
+    def _parse_value(self, parsedargs, index, arg, current_argument,
+                     options_enabled, current_posarg_index):
         try:
             current_argument.action.store_value(arg)
         except UnwantedValueError:
@@ -737,37 +783,10 @@ class ArgumentParser:
             #  None, which can happen at the first loop if there are
             #  no defined positional arguments
             raise UnknownArgumentError(arg)
-        self.parsed_args.append((arg, current_argument))
+        parsedargs.parsed.append((arg, current_argument))
         current_argument.store_index(index)
 
         return (current_argument, options_enabled, current_posarg_index)
-
-    def _check_and_compose_namespace(self, namespace):
-        # Don't store namespace as a parser's attribute, otherwise it should be
-        # kept in sync with the other attributes
-        # TODO: This is still a big difference from argparse: all the parsing
-        #       results are stored directly in parser's attributes, while
-        #       argparse keeps the parser clean, and stores the results in a
-        #       separate Namespace object
-
-        if namespace is None:
-            namespace = Namespace()
-        else:
-            # TODO: asserting isn't the best way to validate arguments...
-            assert isinstance(namespace, Namespace)
-
-        for dest in self.dest_to_argholder:
-            argholder = self.dest_to_argholder[dest]
-            argholder.action.check_value()
-            # namespace could have been passed to parse_args with already some
-            # attributes from another parser, so check that they are not
-            # overwritten
-            # TODO: asserting isn't the best way to validate arguments...
-            assert not hasattr(namespace, dest)
-            if argholder.default is not SUPPRESS:
-                setattr(namespace, dest, argholder.value)
-
-        return namespace
 
 
 class ForwargError(Exception):

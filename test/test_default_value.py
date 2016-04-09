@@ -12,6 +12,7 @@ def opt1(parser):
 
 
 def test1(opt1):
-    assert opt1.parse_args(shlex.split('')) == _m_argparse.Namespace(O=10)
+    assert opt1.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
+                                                                        O=10)
 
 # TODO: Add more tests...

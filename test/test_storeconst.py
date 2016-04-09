@@ -12,6 +12,7 @@ def const(parser):
 
 
 def test1(const):
-    assert const.parse_args(shlex.split('-O')) == _m_argparse.Namespace(O=10)
+    assert const.parse_args(shlex.split('-O')).namespace == \
+        _m_argparse.Namespace(O=10)
 
 # TODO: Add more tests...

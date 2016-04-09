@@ -12,7 +12,7 @@ def none(parser):
 
 
 def test1(none):
-    assert none.parse_args(shlex.split('-O foo -O bar')) == \
+    assert none.parse_args(shlex.split('-O foo -O bar')).namespace == \
                                         _m_argparse.Namespace(O=['foo', 'bar'])
 
 # TODO: Add more tests...

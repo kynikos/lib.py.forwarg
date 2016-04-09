@@ -12,7 +12,7 @@ def pos1(parser):
 
 
 def test1(pos1):
-    assert pos1.parse_args(shlex.split('foo -- --bar')) == \
+    assert pos1.parse_args(shlex.split('foo -- --bar')).namespace == \
                                     _m_argparse.Namespace(arg=['foo', '--bar'])
 
 # TODO: Add more tests...

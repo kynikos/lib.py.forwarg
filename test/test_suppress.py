@@ -20,6 +20,6 @@ def suppress(parser):
 
 def test_suppress_1(suppress):
     ns = suppress.parse_args(shlex.split('--opt1 foo bar --optS xyz abc '
-                                         '-p def ghi'))
+                                         '-p def ghi')).namespace
     assert ns == _m_argparse.Namespace(opt1='foo', opt2='def', pos1='bar',
                                        pos2='ghi')

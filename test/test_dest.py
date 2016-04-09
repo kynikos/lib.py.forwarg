@@ -7,7 +7,7 @@ import argparse as _m_argparse
 
 def test1(parser):
     parser.add_argument('--0', dest='zero')
-    assert parser.parse_args(shlex.split('--0 foo')) == _m_argparse.Namespace(
-                                                                    zero='foo')
+    assert parser.parse_args(shlex.split('--0 foo')).namespace == \
+        _m_argparse.Namespace(zero='foo')
 
 # TODO: Add more tests...

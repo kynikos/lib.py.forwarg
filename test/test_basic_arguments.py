@@ -63,7 +63,7 @@ _2_OPT_ARGS = '--opt1 foo -pbar'
 
 
 def parse(parser, case):
-    return parser.parse_args(shlex.split(case))
+    return parser.parse_args(shlex.split(case)).namespace
 
 
 def test_no_arguments_0(no_arguments):

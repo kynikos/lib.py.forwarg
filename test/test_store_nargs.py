@@ -17,7 +17,7 @@ def test_posNone_1(posNone):
 
 
 def test_posNone_2(posNone):
-    assert posNone.parse_args(shlex.split('foo')) == _m_argparse.Namespace(
+    assert posNone.parse_args(shlex.split('foo')).namespace == _m_argparse.Namespace(
                                                                 posNone='foo')
 
 
@@ -33,12 +33,12 @@ def posQues(parser):
 
 
 def test_posQues_1(posQues):
-    assert posQues.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert posQues.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 posQues=None)
 
 
 def test_posQues_2(posQues):
-    assert posQues.parse_args(shlex.split('foo')) == _m_argparse.Namespace(
+    assert posQues.parse_args(shlex.split('foo')).namespace == _m_argparse.Namespace(
                                                                 posQues='foo')
 
 
@@ -54,12 +54,12 @@ def posQuesC(parser):
 
 
 def test_posQuesC_1(posQuesC):
-    assert posQuesC.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert posQuesC.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                             posQuesC='CONST')
 
 
 def test_posQuesC_2(posQuesC):
-    assert posQuesC.parse_args(shlex.split('foo')) == _m_argparse.Namespace(
+    assert posQuesC.parse_args(shlex.split('foo')).namespace == _m_argparse.Namespace(
                                                                 posQuesC='foo')
 
 
@@ -75,22 +75,22 @@ def posStar(parser):
 
 
 def test_posStar_1(posStar):
-    assert posStar.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert posStar.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 posStar=None)
 
 
 def test_posStar_2(posStar):
-    assert posStar.parse_args(shlex.split('foo')) == _m_argparse.Namespace(
+    assert posStar.parse_args(shlex.split('foo')).namespace == _m_argparse.Namespace(
                                                             posStar=['foo'])
 
 
 def test_posStar_3(posStar):
-    assert posStar.parse_args(shlex.split('foo barbar33')) == \
+    assert posStar.parse_args(shlex.split('foo barbar33')).namespace == \
                             _m_argparse.Namespace(posStar=['foo', 'barbar33'])
 
 
 def test_posStar_4(posStar):
-    assert posStar.parse_args(shlex.split('foo barabc xyz 1 *^%')) == \
+    assert posStar.parse_args(shlex.split('foo barabc xyz 1 *^%')).namespace == \
                             _m_argparse.Namespace(posStar=['foo', 'barabc',
                                                            'xyz', '1', '*^%'])
 
@@ -107,17 +107,17 @@ def test_posPlus_1(posPlus):
 
 
 def test_posPlus_2(posPlus):
-    assert posPlus.parse_args(shlex.split('foo')) == _m_argparse.Namespace(
+    assert posPlus.parse_args(shlex.split('foo')).namespace == _m_argparse.Namespace(
                                                             posPlus=['foo'])
 
 
 def test_posPlus_3(posPlus):
-    assert posPlus.parse_args(shlex.split('foo barbar33')) == \
+    assert posPlus.parse_args(shlex.split('foo barbar33')).namespace == \
                             _m_argparse.Namespace(posPlus=['foo', 'barbar33'])
 
 
 def test_posPlus_4(posPlus):
-    assert posPlus.parse_args(shlex.split('foo barabc xyz 1 *^%')) == \
+    assert posPlus.parse_args(shlex.split('foo barabc xyz 1 *^%')).namespace == \
                             _m_argparse.Namespace(posPlus=['foo', 'barabc',
                                                            'xyz', '1', '*^%'])
 
@@ -134,17 +134,17 @@ def test_posRema_1(posRema):
 
 
 def test_posRema_2(posRema):
-    assert posRema.parse_args(shlex.split('foo')) == _m_argparse.Namespace(
+    assert posRema.parse_args(shlex.split('foo')).namespace == _m_argparse.Namespace(
                                                             posRema=['foo'])
 
 
 def test_posRema_3(posRema):
-    assert posRema.parse_args(shlex.split('foo barbar33')) == \
+    assert posRema.parse_args(shlex.split('foo barbar33')).namespace == \
                             _m_argparse.Namespace(posRema=['foo', 'barbar33'])
 
 
 def test_posRema_4(posRema):
-    assert posRema.parse_args(shlex.split('foo barabc xyz 1 *^%')) == \
+    assert posRema.parse_args(shlex.split('foo barabc xyz 1 *^%')).namespace == \
                             _m_argparse.Namespace(posRema=['foo', 'barabc',
                                                            'xyz', '1', '*^%'])
 
@@ -156,7 +156,7 @@ def pos0(parser):
 
 
 def test_pos0_1(pos0):
-    assert pos0.parse_args(shlex.split('')) == _m_argparse.Namespace(pos0=None)
+    assert pos0.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(pos0=None)
 
 
 def test_pos0_2(pos0):
@@ -181,7 +181,7 @@ def test_pos1_1(pos1):
 
 
 def test_pos1_2(pos1):
-    assert pos1.parse_args(shlex.split('foo')) == _m_argparse.Namespace(
+    assert pos1.parse_args(shlex.split('foo')).namespace == _m_argparse.Namespace(
                                                                 pos1=['foo'])
 
 
@@ -207,7 +207,7 @@ def test_pos2_2(pos2):
 
 
 def test_pos2_3(pos2):
-    assert pos2.parse_args(shlex.split('foo bar')) == _m_argparse.Namespace(
+    assert pos2.parse_args(shlex.split('foo bar')).namespace == _m_argparse.Namespace(
                                                         pos2=['foo', 'bar'])
 
 
@@ -233,7 +233,7 @@ def test_pos5_2(pos5):
 
 
 def test_pos5_3(pos5):
-    assert pos5.parse_args(shlex.split('foo bar abc def xyz')) == \
+    assert pos5.parse_args(shlex.split('foo bar abc def xyz')).namespace == \
                 _m_argparse.Namespace(pos5=['foo', 'bar', 'abc', 'def', 'xyz'])
 
 
@@ -249,7 +249,7 @@ def optNone(parser):
 
 
 def test_optNone_1(optNone):
-    assert optNone.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert optNone.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 optNone=None)
 
 
@@ -259,7 +259,7 @@ def test_optNone_2(optNone):
 
 
 def test_optNone_3(optNone):
-    assert optNone.parse_args(shlex.split('-N foo')) == _m_argparse.Namespace(
+    assert optNone.parse_args(shlex.split('-N foo')).namespace == _m_argparse.Namespace(
                                                                 optNone='foo')
 
 
@@ -275,17 +275,17 @@ def optQues(parser):
 
 
 def test_optQues_1(optQues):
-    assert optQues.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert optQues.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 optQues=None)
 
 
 def test_optQues_2(optQues):
-    assert optQues.parse_args(shlex.split('-Q')) == _m_argparse.Namespace(
+    assert optQues.parse_args(shlex.split('-Q')).namespace == _m_argparse.Namespace(
                                                                 optQues=None)
 
 
 def test_optQues_3(optQues):
-    assert optQues.parse_args(shlex.split('-Q foo')) == _m_argparse.Namespace(
+    assert optQues.parse_args(shlex.split('-Q foo')).namespace == _m_argparse.Namespace(
                                                                 optQues='foo')
 
 
@@ -301,17 +301,17 @@ def optQuesC(parser):
 
 
 def test_optQuesC_1(optQuesC):
-    assert optQuesC.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert optQuesC.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 optQuesC=None)
 
 
 def test_optQuesC_2(optQuesC):
-    assert optQuesC.parse_args(shlex.split('-C')) == _m_argparse.Namespace(
+    assert optQuesC.parse_args(shlex.split('-C')).namespace == _m_argparse.Namespace(
                                                             optQuesC='CONST')
 
 
 def test_optQuesC_3(optQuesC):
-    assert optQuesC.parse_args(shlex.split('-C foo')) == _m_argparse.Namespace(
+    assert optQuesC.parse_args(shlex.split('-C foo')).namespace == _m_argparse.Namespace(
                                                                 optQuesC='foo')
 
 
@@ -327,22 +327,22 @@ def optStar(parser):
 
 
 def test_optStar_1(optStar):
-    assert optStar.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert optStar.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 optStar=None)
 
 
 def test_optStar_2(optStar):
-    assert optStar.parse_args(shlex.split('-S')) == _m_argparse.Namespace(
+    assert optStar.parse_args(shlex.split('-S')).namespace == _m_argparse.Namespace(
                                                                     optStar=[])
 
 
 def test_optStar_3(optStar):
-    assert optStar.parse_args(shlex.split('-S foo')) == _m_argparse.Namespace(
+    assert optStar.parse_args(shlex.split('-S foo')).namespace == _m_argparse.Namespace(
                                                             optStar=['foo'])
 
 
 def test_optStar_4(optStar):
-    assert optStar.parse_args(shlex.split('-S foo bar xyz abc')) == \
+    assert optStar.parse_args(shlex.split('-S foo bar xyz abc')).namespace == \
                     _m_argparse.Namespace(optStar=['foo', 'bar', 'xyz', 'abc'])
 
 
@@ -353,7 +353,7 @@ def optPlus(parser):
 
 
 def test_optPlus_1(optPlus):
-    assert optPlus.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert optPlus.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 optPlus=None)
 
 
@@ -363,12 +363,12 @@ def test_optPlus_2(optPlus):
 
 
 def test_optPlus_3(optPlus):
-    assert optPlus.parse_args(shlex.split('-P foo')) == _m_argparse.Namespace(
+    assert optPlus.parse_args(shlex.split('-P foo')).namespace == _m_argparse.Namespace(
                                                             optPlus=['foo'])
 
 
 def test_optPlus_4(optPlus):
-    assert optPlus.parse_args(shlex.split('-P foo bar xyz abc')) == \
+    assert optPlus.parse_args(shlex.split('-P foo bar xyz abc')).namespace == \
                     _m_argparse.Namespace(optPlus=['foo', 'bar', 'xyz', 'abc'])
 
 
@@ -379,7 +379,7 @@ def optRema(parser):
 
 
 def test_optRema_1(optRema):
-    assert optRema.parse_args(shlex.split('')) == _m_argparse.Namespace(
+    assert optRema.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(
                                                                 optRema=None)
 
 
@@ -389,12 +389,12 @@ def test_optRema_2(optRema):
 
 
 def test_optRema_3(optRema):
-    assert optRema.parse_args(shlex.split('-R foo')) == _m_argparse.Namespace(
+    assert optRema.parse_args(shlex.split('-R foo')).namespace == _m_argparse.Namespace(
                                                             optRema=['foo'])
 
 
 def test_optRema_4(optRema):
-    assert optRema.parse_args(shlex.split('-R foo bar xyz abc')) == \
+    assert optRema.parse_args(shlex.split('-R foo bar xyz abc')).namespace == \
                     _m_argparse.Namespace(optRema=['foo', 'bar', 'xyz', 'abc'])
 
 
@@ -405,11 +405,11 @@ def opt0(parser):
 
 
 def test_opt0_1(opt0):
-    assert opt0.parse_args(shlex.split('')) == _m_argparse.Namespace(opt0=None)
+    assert opt0.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(opt0=None)
 
 
 def test_opt0_2(opt0):
-    assert opt0.parse_args(shlex.split('-0')) == _m_argparse.Namespace(opt0=[])
+    assert opt0.parse_args(shlex.split('-0')).namespace == _m_argparse.Namespace(opt0=[])
 
 
 def test_opt0_3(opt0):
@@ -424,7 +424,7 @@ def opt1(parser):
 
 
 def test_opt1_1(opt1):
-    assert opt1.parse_args(shlex.split('')) == _m_argparse.Namespace(opt1=None)
+    assert opt1.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(opt1=None)
 
 
 def test_opt1_2(opt1):
@@ -433,7 +433,7 @@ def test_opt1_2(opt1):
 
 
 def test_opt1_3(opt1):
-    assert opt1.parse_args(shlex.split('-1 foo')) == _m_argparse.Namespace(
+    assert opt1.parse_args(shlex.split('-1 foo')).namespace == _m_argparse.Namespace(
                                                                 opt1=['foo'])
 
 
@@ -449,7 +449,7 @@ def opt2(parser):
 
 
 def test_opt2_1(opt2):
-    assert opt2.parse_args(shlex.split('')) == _m_argparse.Namespace(opt2=None)
+    assert opt2.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(opt2=None)
 
 
 def test_opt2_2(opt2):
@@ -463,7 +463,7 @@ def test_opt2_3(opt2):
 
 
 def test_opt2_4(opt2):
-    assert opt2.parse_args(shlex.split('-2 foo bar')) == _m_argparse.Namespace(
+    assert opt2.parse_args(shlex.split('-2 foo bar')).namespace == _m_argparse.Namespace(
                                                         opt2=['foo', 'bar'])
 
 
@@ -479,7 +479,7 @@ def opt5(parser):
 
 
 def test_opt5_1(opt5):
-    assert opt5.parse_args(shlex.split('')) == _m_argparse.Namespace(opt5=None)
+    assert opt5.parse_args(shlex.split('')).namespace == _m_argparse.Namespace(opt5=None)
 
 
 def test_opt5_2(opt5):
@@ -493,7 +493,7 @@ def test_opt5_3(opt5):
 
 
 def test_opt5_4(opt5):
-    assert opt5.parse_args(shlex.split('-5 foo bar xyz abc def')) == \
+    assert opt5.parse_args(shlex.split('-5 foo bar xyz abc def')).namespace == \
                 _m_argparse.Namespace(opt5=['foo', 'bar', 'xyz', 'abc', 'def'])
 
 
@@ -532,7 +532,7 @@ def test_mixed2_1(mixed2):
 
 
 def test_mixed2_2(mixed2):
-    assert mixed2.parse_args(shlex.split('foo bar xyz abc def')) == \
+    assert mixed2.parse_args(shlex.split('foo bar xyz abc def')).namespace == \
             _m_argparse.Namespace(posPlus=['foo', 'bar', 'xyz', 'abc', 'def'],
                                   posStar=None)
 
@@ -549,7 +549,7 @@ def mixed3(parser):
 def test_mixed3_1(mixed3):
     assert mixed3.parse_args(shlex.split('foo bar xyz -C=abc def '
                                          '--optRema=zzz --noopt -- - '
-                                         'something')) == \
+                                         'something')).namespace == \
             _m_argparse.Namespace(posNone='foo',
                                   posStar=['bar', 'xyz', 'def'],
                                   optQuesC='abc',
@@ -568,7 +568,7 @@ def mixed4(parser):
 
 def test_mixed4_1(mixed4):
     assert mixed4.parse_args(shlex.split('foo --opt2=yyy zzz bar xyz -P abc '
-                                         'def')) == \
+                                         'def')).namespace == \
             _m_argparse.Namespace(posQues='foo',
                                   posPlus=['bar', 'xyz'],
                                   optPlus=['abc', 'def'],
@@ -585,7 +585,7 @@ def mixed5(parser):
 
 
 def test_mixed5_1(mixed5):
-    assert mixed5.parse_args(shlex.split('foo -S bar xyz abc -N def zzz')) == \
+    assert mixed5.parse_args(shlex.split('foo -S bar xyz abc -N def zzz')).namespace == \
             _m_argparse.Namespace(posNone='foo',
                                   posRema=['zzz'],
                                   optStar=['bar', 'xyz', 'abc'],
@@ -593,7 +593,7 @@ def test_mixed5_1(mixed5):
 
 
 def test_mixed5_2(mixed5):
-    assert mixed5.parse_args(shlex.split('foo -N def bar -S xyz abc zzz')) == \
+    assert mixed5.parse_args(shlex.split('foo -N def bar -S xyz abc zzz')).namespace == \
             _m_argparse.Namespace(posNone='foo',
                                   posRema=['bar', '-S', 'xyz', 'abc', 'zzz'],
                                   optStar=None,
@@ -610,7 +610,7 @@ def mixed6(parser):
 
 
 def test_mixed6_1(mixed6):
-    assert mixed6.parse_args(shlex.split('-A foo bar -B xyz abc')) == \
+    assert mixed6.parse_args(shlex.split('-A foo bar -B xyz abc')).namespace == \
             _m_argparse.Namespace(posQues1=None,
                                   posQues2=None,
                                   optA=['foo', 'bar'],
@@ -618,7 +618,7 @@ def test_mixed6_1(mixed6):
 
 
 def test_mixed6_2(mixed6):
-    assert mixed6.parse_args(shlex.split('foo -B xyz abc bar')) == \
+    assert mixed6.parse_args(shlex.split('foo -B xyz abc bar')).namespace == \
             _m_argparse.Namespace(posQues1='foo',
                                   posQues2='bar',
                                   optA=None,
@@ -626,7 +626,7 @@ def test_mixed6_2(mixed6):
 
 
 def test_mixed6_3(mixed6):
-    assert mixed6.parse_args(shlex.split('foo -B xyz abc')) == \
+    assert mixed6.parse_args(shlex.split('foo -B xyz abc')).namespace == \
             _m_argparse.Namespace(posQues1='foo',
                                   posQues2=None,
                                   optA=None,
@@ -643,7 +643,7 @@ def mixed7(parser):
 
 
 def test_mixed7_1(mixed7):
-    assert mixed7.parse_args(shlex.split('def -C foo bar -D xyz abc zzz')) == \
+    assert mixed7.parse_args(shlex.split('def -C foo bar -D xyz abc zzz')).namespace == \
             _m_argparse.Namespace(posA=['def', 'bar'],
                                   posB=['abc', 'zzz'],
                                   optQuesC='foo',
