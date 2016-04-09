@@ -260,9 +260,11 @@ class ArgumentHolderGroup:
                      const=None, default=None, type=None, choices=None,
                      required=None, help=None, metavar=None, dest=None,
                      version=None):
-        self.do_add_argument(_ArgumentHolder.create(
+        argholder = _ArgumentHolder.create(
                 self.parser, nameorflags, action, nargs, const, default, type,
-                choices, required, help, metavar, dest, version))
+                choices, required, help, metavar, dest, version)
+        self.do_add_argument(argholder)
+        return argholder
 
     def do_add_argument(self, argholder):
         argholder.set_group(self)
@@ -539,6 +541,7 @@ class ArgumentParser:
             # Just in case in the future more argument types were implemented?
             raise UnknownArgumentType(argholder.dest)
         group.do_add_argument(argholder)
+        return argholder
 
     def parse_args(self, args=None, namespace=None):
         # Don't try to define a parse_known_args method, since there are many
@@ -551,39 +554,6 @@ class ArgumentParser:
 
         # TODO: Check that args is an iterable of strings
         args = _m_sys.argv[1:] if args is None else args
-
-        # The goal is to obtain attributes like:
-        #   $ syncere posarg1value --option1 value1 value2 --option2=value \
-        #   posarg2value1 -abc=value -defvalue posarg2value2 -ghi \
-        #   value posarg3value -- --posarg2value3
-        #
-        #   self.parsed_args = [
-        #       'posarg1value',
-        #       '--option1',
-        #       'value1',
-        #       'value2',
-        #       --option2=value,
-        #       'posarg2value1',
-        #       ['-', 'a', 'b', 'q=value'],
-        #       ['-', 'r', 's', 'fvalue'],
-        #       'posarg2value2',
-        #       ['-', 'g', 't', 'i'],
-        #       'value',
-        #       'posarg3value',
-        #       '--',
-        #       '--posarg2value3',
-        #   ]
-        #
-        #   PositionalArgumentHolder1.parsed_arg_indices = [0]
-        #   OptionalArgumentHolder1.parsed_arg_indices = [1, 2, 3]
-        #   OptionalArgumentHolder2.parsed_arg_indices = [4]
-        #   PositionalArgumentHolder2.parsed_arg_indices = [5, 8, 13]
-        #   OptionalArgumentHolder3.parsed_arg_indices = [(6, 1)]
-        #   OptionalArgumentHolder4.parsed_arg_indices = [(6, 2)]
-        #   OptionalArgumentHolder5.parsed_arg_indices = [(7, 3)]
-        #   OptionalArgumentHolder6.parsed_arg_indices = [(9, 1)]
-        #   OptionalArgumentHolder7.parsed_arg_indices = [(9, 3), 10]
-        #   PositionalArgumentHolder3.parsed_arg_indices = [11]
 
         current_posarg_index = 0
         try:
@@ -641,7 +611,7 @@ class ArgumentParser:
         except KeyError:
             if len(arg) == 2:
                 # This is the special '--' option
-                self.parsed_args.append(arg)
+                self.parsed_args.append((arg, None))
                 raise ContinueLoop()
             else:
                 raise UnknownArgumentError(arg)
@@ -662,14 +632,14 @@ class ArgumentParser:
             if optargholder.nargs is REMAINDER:
                 options_enabled = False
             # This is '--option' or '--option=value'
-            self.parsed_args.append(arg)
+            self.parsed_args.append((arg, optargholder))
 
         return (current_argument, options_enabled)
 
     def _parse_short_flag_cluster(self, index, arg, current_argument,
                                   options_enabled):
         # This is the initial '-'
-        self.parsed_args.append([arg[0]])
+        self.parsed_args.append([(arg[0], None)])
         for subindex, option in enumerate(arg[1:]):
             try:
                 optargholder = self.shortflag_to_optargholder[option]
@@ -686,7 +656,7 @@ class ArgumentParser:
                 value = arg[subindex + 2:]
                 if value == '':
                     # This is the last short option 'o'
-                    self.parsed_args[-1].append(option)
+                    self.parsed_args[-1].append((option, optargholder))
                 elif value[0] == self.OPT_SEP:
                     value = value[1:]
                     if value:
@@ -698,7 +668,8 @@ class ArgumentParser:
                         # Add 1 to subindex because the initial
                         # prefix (e.g. '-') must be taken into
                         # account
-                        self.parsed_args[-1].append(arg[subindex + 1:])
+                        self.parsed_args[-1].append((arg[subindex + 1:],
+                                                     optargholder))
                         # Set 'options_enabled' here, *before* the
                         # 'break'
                         if optargholder.nargs is REMAINDER:
@@ -715,13 +686,14 @@ class ArgumentParser:
                         optargholder.action.store_value(value)
                     except UnwantedValueError:
                         # This is the short option 'o'
-                        self.parsed_args[-1].append(option)
+                        self.parsed_args[-1].append((option, optargholder))
                     else:
                         # This is the short option 'ovalue'
                         # Add 1 to subindex because the initial
                         # prefix (e.g. '-') must be taken into
                         # account
-                        self.parsed_args[-1].append(arg[subindex + 1:])
+                        self.parsed_args[-1].append((arg[subindex + 1:],
+                                                     optargholder))
                         # Set 'options_enabled' here, *before* the
                         # 'break'
                         if optargholder.nargs is REMAINDER:
@@ -736,7 +708,6 @@ class ArgumentParser:
 
     def _parse_value(self, index, arg, current_argument, options_enabled,
                      current_posarg_index):
-        self.parsed_args.append(arg)
         try:
             current_argument.action.store_value(arg)
         except UnwantedValueError:
@@ -766,6 +737,7 @@ class ArgumentParser:
             #  None, which can happen at the first loop if there are
             #  no defined positional arguments
             raise UnknownArgumentError(arg)
+        self.parsed_args.append((arg, current_argument))
         current_argument.store_index(index)
 
         return (current_argument, options_enabled, current_posarg_index)
