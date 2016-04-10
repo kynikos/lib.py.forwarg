@@ -462,11 +462,10 @@ class ParseResults:
             assert isinstance(namespace, Namespace)
             self._namespace = namespace
 
-        self.argdef_to_argholder = {}
-        for argdef in self.parser.dest_to_argdef.values():
-            self.argdef_to_argholder[argdef] = \
+        self.argdef_to_argholder = {argdef:
                                     argdef.create_parsed_values_holder(self)
-
+                                    for argdef
+                                    in self.parser.dest_to_argdef.values()}
         self.splitline = []
 
         self.current_posarg_index = 0
