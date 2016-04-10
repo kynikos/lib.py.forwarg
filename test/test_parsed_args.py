@@ -10,8 +10,10 @@ def test1():
     argdef = parser.add_argument('--foo')
     parsedargs = parser.parse_args(shlex.split('--foo bar'))
     argholder = parsedargs.argdef_to_argholder[argdef]
-    assert parsedargs.splitline == [('--foo', argholder), ('bar', argholder)]
-    assert argholder.parsed_arg_indices == [0, 1]
+    assert parsedargs.splitline[0].arg == '--foo'
+    assert parsedargs.splitline[0].argholder == argholder
+    assert parsedargs.splitline[1].arg == 'bar'
+    assert parsedargs.splitline[1].argholder == argholder
 
 
 def test2():
@@ -19,8 +21,8 @@ def test2():
     argdef = parser.add_argument('--foo')
     parsedargs = parser.parse_args(shlex.split('--foo=bar'))
     argholder = parsedargs.argdef_to_argholder[argdef]
-    assert parsedargs.splitline == [('--foo=bar', argholder)]
-    assert argholder.parsed_arg_indices == [0]
+    assert parsedargs.splitline[0].arg == '--foo=bar'
+    assert parsedargs.splitline[0].argholder == argholder
 
 
 def test3():
@@ -28,7 +30,9 @@ def test3():
     argdef = parser.add_argument('-o')
     parsedargs = parser.parse_args(shlex.split('-o=bar'))
     argholder = parsedargs.argdef_to_argholder[argdef]
-    assert parsedargs.splitline == [[('-', None), ('o=bar', argholder)]]
-    assert argholder.parsed_arg_indices == [(0, 1)]
+    assert parsedargs.splitline[0].prefix == '-'
+    assert parsedargs.splitline[0].options[0].subindex == 0
+    assert parsedargs.splitline[0].options[0].string == 'o=bar'
+    assert parsedargs.splitline[0].options[0].argholder == argholder
 
 # TODO: Add more tests...

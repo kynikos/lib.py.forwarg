@@ -73,9 +73,6 @@ class Action:
     def check_value(self):
         raise NotImplementedError()
 
-    def store_index(self, index):
-        self.argholder.parsed_arg_indices.append(index)
-
 
 class _ActionStore(Action):
     def check_value(self):
@@ -368,8 +365,8 @@ class _ArgumentDefinition:
 
         return dest
 
-    def create_parsed_values_holder(self, parsedargs):
-        return _ArgumentHolder(self, parsedargs)
+    def create_parsed_values_holder(self, parseresults):
+        return _ArgumentHolder(self, parseresults)
 
 
 class OptionalArgumentDefinition(_ArgumentDefinition):
@@ -435,15 +432,14 @@ class PositionalArgumentDefinition(_ArgumentDefinition):
 
 
 class _ArgumentHolder:
-    def __init__(self, argdef, parsedargs):
+    def __init__(self, argdef, parseresults):
         self.argdef = argdef
-        self.parsedargs = parsedargs
+        self.parseresults = parseresults
 
         self.action = self.argdef.action(argdef, self)
         self.number_of_parsed_flags = 0
         self.number_of_parsed_values_for_all_flags = 0
         self.number_of_parsed_values_for_current_flag = 0
-        self.parsed_arg_indices = []
         self.value = self.argdef.default
 
 
@@ -479,7 +475,6 @@ class ParseResults:
         else:
             self.options_enabled = self.current_argholder.argdef.nargs is not \
                                                                     REMAINDER
-        self.ContinueLoop = type('ContinueLoop', (Exception, ), {})
 
         self._parse(args)
 
@@ -513,14 +508,18 @@ class ParseResults:
         for index, arg in enumerate(args):
             if self.options_enabled and arg[0] in self.parser.prefix_chars:
                 if arg[1] in self.parser.prefix_chars:
-                    try:
-                        self._parse_long_flag(index, arg)
-                    except self.ContinueLoop:
-                        continue
+                    if len(arg) == 2:
+                        self.splitline.append(_ParsedDoublePrefix(self, index,
+                                                                  arg))
+                    else:
+                        self.splitline.append(_ParsedLongOption(self, index,
+                                                                arg))
                 else:
-                    self._parse_short_flag_cluster(index, arg)
+                    self.splitline.append(_ParsedShortOptionsCluster(self,
+                                                                     index,
+                                                                     arg))
             else:
-                self._parse_value(index, arg)
+                self.splitline.append(_ParsedValue(self, index, arg))
 
         # TODO: Do the positional arguments have to be parsed in a second loop,
         #       so that the various nargs settings can be properly honored?
@@ -536,113 +535,164 @@ class ParseResults:
         for argholder in self.argdef_to_argholder.values():
             argholder.action.check_value()
 
-    def _parse_long_flag(self, index, arg):
-        name, sep, value = arg[2:].partition(self.parser.OPT_SEP)
+
+class _ParsedArgument:
+    def __init__(self, results, index, arg):
+        self.results = results
+        self.index = index
+        self.arg = arg
+
+        self._parse(arg)
+
+    def _parse(self, arg):
+        raise NotImplementedError()
+
+
+class _ParsedDoublePrefix(_ParsedArgument):
+    def _parse(self, arg):
+        self.results.options_enabled = False
+
+
+class _ParsedLongOption(_ParsedArgument):
+    def __init__(self, results, index, arg):
+        self.argholder = None
+        super().__init__(results, index, arg)
+
+    def _parse(self, arg):
+        name, sep, value = arg[2:].partition(self.results.parser.OPT_SEP)
         try:
-            argdef = self.parser.longflag_to_optargdef[name]
+            argdef = self.results.parser.longflag_to_optargdef[name]
         except KeyError:
-            if len(arg) == 2:
-                # This is the special '--' option
-                self.splitline.append((arg, None))
-                self.options_enabled = False
-                raise self.ContinueLoop()
-            else:
-                raise UnknownArgumentError(arg)
+            raise UnknownArgumentError(arg)
         else:
-            self.current_argholder = self.argdef_to_argholder[argdef]
-            self.current_argholder.action.store_index(index)
-            self.current_argholder.action.process_flag()
+            self.results.current_argholder = self.results.argdef_to_argholder[
+                                                                        argdef]
+            self.results.current_argholder.action.process_flag()
             if sep:
                 if value:
                     # current_argholder can raise UnwantedValueError,
                     # but in this case it shouldn't be caught
-                    self.current_argholder.action.store_value(value)
+                    self.results.current_argholder.action.store_value(value)
                 else:
                     # The option ends with the separator, without
                     # a value (ambiguous, better not allow it)
                     # TODO: But does argparse support this?
                     raise InvalidArgumentError(arg)
             if argdef.nargs is REMAINDER:
-                self.options_enabled = False
+                self.results.options_enabled = False
             # This is '--option' or '--option=value'
-            self.splitline.append((arg, self.current_argholder))
+            self.argholder = self.results.current_argholder
 
-    def _parse_short_flag_cluster(self, index, arg):
-        # This is the initial '-'
-        self.splitline.append([(arg[0], None)])
-        for subindex, option in enumerate(arg[1:]):
-            try:
-                argdef = self.parser.shortflag_to_optargdef[option]
-            except KeyError:
-                raise UnknownArgumentError(arg)
-            else:
-                self.current_argholder = self.argdef_to_argholder[argdef]
-                # Add 1 to subindex because the initial prefix
-                # (e.g. '-') must be taken into account
-                self.current_argholder.action.store_index((index,
-                                                           subindex + 1))
-                self.current_argholder.action.process_flag()
-                # Add 2 to subindex because the initial prefix
-                # (e.g. '-') must be taken into account
-                value = arg[subindex + 2:]
-                if value == '':
-                    # This is the last short option 'o'
-                    self.splitline[-1].append((option, self.current_argholder))
-                elif value[0] == self.parser.OPT_SEP:
-                    value = value[1:]
-                    if value:
-                        # current_argholder can raise
-                        # UnwantedValueError, but in this case it
-                        # shouldn't be caught
-                        self.current_argholder.action.store_value(value)
-                        # This is the short option 'o=value'
-                        # Add 1 to subindex because the initial
-                        # prefix (e.g. '-') must be taken into
-                        # account
-                        self.splitline[-1].append((arg[subindex + 1:],
-                                                   self.current_argholder))
-                        # Set 'options_enabled' here, *before* the
-                        # 'break'
-                        if argdef.nargs is REMAINDER:
-                            self.options_enabled = False
-                        break
-                    else:
-                        # The option ends with the separator,
-                        # without a value (ambiguous, better not
-                        # allow it)
-                        # TODO: But does argparse support this?
-                        raise InvalidArgumentError(arg)
-                else:
-                    try:
-                        self.current_argholder.action.store_value(value)
-                    except UnwantedValueError:
-                        # This is the short option 'o'
-                        self.splitline[-1].append((option,
-                                                   self.current_argholder))
-                    else:
-                        # This is the short option 'ovalue'
-                        # Add 1 to subindex because the initial
-                        # prefix (e.g. '-') must be taken into
-                        # account
-                        self.splitline[-1].append((arg[subindex + 1:],
-                                                   self.current_argholder))
-                        # Set 'options_enabled' here, *before* the
-                        # 'break'
-                        if argdef.nargs is REMAINDER:
-                            self.options_enabled = False
-                        break
-                # This is reached if no 'break' has been
-                # enctountered
-                if argdef.nargs is REMAINDER:
-                    self.options_enabled = False
 
-    def _parse_value(self, index, arg):
+class _ParsedShortOptionsCluster(_ParsedArgument):
+    def __init__(self, results, index, arg):
+        self.prefix = arg[0]
+        self.options = []
+        super().__init__(results, index, arg)
+
+    def _parse(self, arg):
+        # Add 1 to subindex because the initial prefix
+        # (e.g. '-') must be taken into account
+        for subindex, optarg in enumerate(arg[1:]):
+            option = _ParsedShortOption(self, subindex)
+            continue_ = option.parse(arg, optarg)
+            self.options.append(option)
+            if not continue_:
+                break
+
+
+class _ParsedShortOption:
+    def __init__(self, cluster, subindex):
+        self.cluster = cluster
+        self.subindex = subindex
+        self.string = None
+        self.argholder = None
+
+    def parse(self, arg, optarg):
         try:
-            self.current_argholder.action.store_value(arg)
+            argdef = self.cluster.results.parser.shortflag_to_optargdef[optarg]
+        except KeyError:
+            raise UnknownArgumentError(arg)
+
+        self.cluster.results.current_argholder = \
+            self.cluster.results.argdef_to_argholder[argdef]
+        self.cluster.results.current_argholder.action.process_flag()
+        # Add 2 to subindex because the initial prefix
+        # (e.g. '-') must be taken into account
+        value = arg[self.subindex + 2:]
+        if value == '':
+            # This is the last short option 'o'
+            self.string = optarg
+            self.argholder = self.cluster.results.current_argholder
+        elif value[0] == self.cluster.results.parser.OPT_SEP:
+            value = value[1:]
+            if value:
+                # current_argholder can raise
+                # UnwantedValueError, but in this case it
+                # shouldn't be caught
+                self.cluster.results.current_argholder.action.store_value(
+                                                                        value)
+                # This is the short option 'o=value'
+                # Add 1 to subindex because the initial
+                # prefix (e.g. '-') must be taken into
+                # account
+                self.string = arg[self.subindex + 1:]
+                self.argholder = self.cluster.results.current_argholder
+                # Set 'options_enabled' here, *before* the
+                # 'break'
+                if argdef.nargs is REMAINDER:
+                    self.cluster.results.options_enabled = False
+                # Break the cluster's loop
+                return False
+            else:
+                # The option ends with the separator,
+                # without a value (ambiguous, better not
+                # allow it)
+                # TODO: But does argparse support this?
+                raise InvalidArgumentError(arg)
+        else:
+            try:
+                self.cluster.results.current_argholder.action.store_value(
+                                                                        value)
+            except UnwantedValueError:
+                # This is the short option 'o'
+                self.string = optarg
+                self.argholder = self.cluster.results.current_argholder
+            else:
+                # This is the short option 'ovalue'
+                # Add 1 to subindex because the initial
+                # prefix (e.g. '-') must be taken into
+                # account
+                self.string = arg[self.subindex + 1:]
+                self.argholder = self.cluster.results.current_argholder
+                # Set 'options_enabled' here, *before* the
+                # 'break'
+                if argdef.nargs is REMAINDER:
+                    self.cluster.results.options_enabled = False
+                # Break the cluster's loop
+                return False
+        # This is reached if no 'break' has been
+        # enctountered
+        if argdef.nargs is REMAINDER:
+            self.cluster.results.options_enabled = False
+        # Continue the cluster's loop
+        return True
+
+
+class _ParsedValue(_ParsedArgument):
+    def __init__(self, results, index, arg):
+        self.argholder = None
+        super().__init__(results, index, arg)
+
+    def _parse(self, arg):
+        try:
+            self.results.current_argholder.action.store_value(arg)
         except UnwantedValueError:
             try:
-                self.current_argholder = self.argdef_to_argholder[
-                            self.parser.posargdefs[self.current_posarg_index]]
+                self.results.current_argholder = \
+                                    self.results.argdef_to_argholder[
+                                        self.results.parser.posargdefs[
+                                            self.results.current_posarg_index]]
             except IndexError:
                 # This can be raised if e.g. there's only one optional
                 # '-O' argument defined and no positional ones, and the
@@ -650,27 +700,26 @@ class ParseResults:
                 raise UnknownArgumentError(arg)
             else:
                 try:
-                    self.current_argholder.action.store_value(arg)
+                    self.results.current_argholder.action.store_value(arg)
                 except UnwantedValueError:
-                    self.current_posarg_index += 1
+                    self.results.current_posarg_index += 1
                     try:
-                        argdef = self.parser.posargdefs[
-                                                    self.current_posarg_index]
+                        argdef = self.results.parser.posargdefs[
+                                            self.results.current_posarg_index]
                     except IndexError:
                         raise UnknownArgumentError(arg)
                     else:
-                        self.current_argholder = self.argdef_to_argholder[
-                                                                        argdef]
-                        self.current_argholder.action.store_value(arg)
+                        self.results.current_argholder = \
+                                    self.results.argdef_to_argholder[argdef]
+                        self.results.current_argholder.action.store_value(arg)
                         if argdef.nargs is REMAINDER:
-                            self.options_enabled = False
+                            self.results.options_enabled = False
         except AttributeError:
             # AttributeError could be raised if current_argholder is
             #  None, which can happen at the first loop if there are
             #  no defined positional arguments
             raise UnknownArgumentError(arg)
-        self.splitline.append((arg, self.current_argholder))
-        self.current_argholder.action.store_index(index)
+        self.argholder = self.results.current_argholder
 
 
 class ArgumentParser:
