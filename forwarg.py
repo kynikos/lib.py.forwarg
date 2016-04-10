@@ -535,6 +535,34 @@ class ParseResults:
         for argholder in self.argdef_to_argholder.values():
             argholder.action.check_value()
 
+    def filter_whitelist(self, dests=(), groups=()):
+        filtered = []
+        last_added_arg = None
+        for arg in self.splitline:
+            string = arg.filter_whitelist(dests, groups)
+            if string is not False:
+                filtered.append(string)
+                last_added_arg = arg
+        # Remove the special double-prefix mark if everything after it has
+        # been filtered out
+        if isinstance(last_added_arg, _ParsedDoublePrefix):
+            del filtered[-1]
+        return filtered
+
+    def filter_blacklist(self, dests=(), groups=()):
+        filtered = []
+        last_added_arg = None
+        for arg in self.splitline:
+            string = arg.filter_blacklist(dests, groups)
+            if string is not False:
+                filtered.append(string)
+                last_added_arg = arg
+        # Remove the special double-prefix mark if everything after it has
+        # been filtered out
+        if isinstance(last_added_arg, _ParsedDoublePrefix):
+            del filtered[-1]
+        return filtered
+
 
 class _ParsedArgument:
     def __init__(self, results, index, arg):
@@ -547,10 +575,22 @@ class _ParsedArgument:
     def _parse(self, arg):
         raise NotImplementedError()
 
+    def filter_whitelist(self, dests, groups):
+        raise NotImplementedError()
+
+    def filter_blacklist(self, dests, groups):
+        raise NotImplementedError()
+
 
 class _ParsedDoublePrefix(_ParsedArgument):
     def _parse(self, arg):
         self.results.options_enabled = False
+
+    def filter_whitelist(self, dests, groups):
+        return self.arg
+
+    def filter_blacklist(self, dests, groups):
+        return self.arg
 
 
 class _ParsedLongOption(_ParsedArgument):
@@ -583,6 +623,20 @@ class _ParsedLongOption(_ParsedArgument):
             # This is '--option' or '--option=value'
             self.argholder = self.results.current_argholder
 
+    def filter_whitelist(self, dests, groups):
+        if self.argholder.argdef.dest in dests or \
+                self.argholder.argdef.group.title in groups:
+            return self.arg
+        else:
+            return False
+
+    def filter_blacklist(self, dests, groups):
+        if self.argholder.argdef.dest not in dests and \
+                self.argholder.argdef.group.title not in groups:
+            return self.arg
+        else:
+            return False
+
 
 class _ParsedShortOptionsCluster(_ParsedArgument):
     def __init__(self, results, index, arg):
@@ -599,6 +653,28 @@ class _ParsedShortOptionsCluster(_ParsedArgument):
             self.options.append(option)
             if not continue_:
                 break
+
+    def filter_whitelist(self, dests, groups):
+        arg = ''
+        for option in self.options:
+            optarg = option.filter_whitelist(dests, groups)
+            if optarg is not False:
+                arg += optarg
+        if arg:
+            return ''.join((self.prefix, arg))
+        else:
+            return False
+
+    def filter_blacklist(self, dests, groups):
+        arg = ''
+        for option in self.options:
+            optarg = option.filter_blacklist(dests, groups)
+            if optarg is not False:
+                arg += optarg
+        if arg:
+            return ''.join((self.prefix, arg))
+        else:
+            return False
 
 
 class _ParsedShortOption:
@@ -678,6 +754,20 @@ class _ParsedShortOption:
         # Continue the cluster's loop
         return True
 
+    def filter_whitelist(self, dests, groups):
+        if self.argholder.argdef.dest in dests or \
+                self.argholder.argdef.group.title in groups:
+            return self.string
+        else:
+            return False
+
+    def filter_blacklist(self, dests, groups):
+        if self.argholder.argdef.dest not in dests and \
+                self.argholder.argdef.group.title not in groups:
+            return self.string
+        else:
+            return False
+
 
 class _ParsedValue(_ParsedArgument):
     def __init__(self, results, index, arg):
@@ -720,6 +810,20 @@ class _ParsedValue(_ParsedArgument):
             #  no defined positional arguments
             raise UnknownArgumentError(arg)
         self.argholder = self.results.current_argholder
+
+    def filter_whitelist(self, dests, groups):
+        if self.argholder.argdef.dest in dests or \
+                self.argholder.argdef.group.title in groups:
+            return self.arg
+        else:
+            return False
+
+    def filter_blacklist(self, dests, groups):
+        if self.argholder.argdef.dest not in dests and \
+                self.argholder.argdef.group.title not in groups:
+            return self.arg
+        else:
+            return False
 
 
 class ArgumentParser:
