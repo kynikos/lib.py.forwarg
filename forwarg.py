@@ -452,11 +452,11 @@ class ParseResults:
         self.parser = parser
 
         if namespace is None:
-            self._namespace = Namespace()
+            self.namespace = Namespace()
         else:
             # TODO: asserting isn't the best way to validate arguments...
             assert isinstance(namespace, Namespace)
-            self._namespace = namespace
+            self.namespace = namespace
 
         self.argdef_to_argholder = {argdef:
                                     argdef.create_parsed_values_holder(self)
@@ -477,23 +477,16 @@ class ParseResults:
                                                                     REMAINDER
         self._parse(args)
 
-    @property
-    def namespace(self):
-        # This property exists only for backward compatibility with argparse;
-        # when possible, read the values directly from the argument holoder's
-        # attributes
         for argdef in self.argdef_to_argholder:
             # namespace could have been initialized in the constructor with
-            # already some # attributes from another parser, so check that they
+            # already some attributes from another parser, so check that they
             # are not overwritten
             # TODO: ...or does argparse allow overwriting?
             # TODO: asserting isn't the best way to validate arguments...
-            assert not hasattr(self._namespace, argdef.dest)
+            assert not hasattr(self.namespace, argdef.dest)
             if argdef.default is not SUPPRESS:
-                setattr(self._namespace, argdef.dest,
+                setattr(self.namespace, argdef.dest,
                         self.argdef_to_argholder[argdef].value)
-
-        return self._namespace
 
     def _parse(self, args):
         # Don't try to define a parse_known_args method, since there are many
