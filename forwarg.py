@@ -446,7 +446,7 @@ class _ArgumentHolder:
 class ParseResults:
     # Keep the parse results separate from the generic argument definitions, so
     # that more command lines can be parsed with the same parser object
-    # This behavior is consistent with argparse; the namespace attribute is
+    # This behavior is consistent with argparse; the namespace property is
     # analogous to argparse's parse_args return value
     def __init__(self, parser, args, namespace):
         self.parser = parser
@@ -475,7 +475,6 @@ class ParseResults:
         else:
             self.options_enabled = self.current_argholder.argdef.nargs is not \
                                                                     REMAINDER
-
         self._parse(args)
 
     @property
@@ -487,6 +486,7 @@ class ParseResults:
             # namespace could have been initialized in the constructor with
             # already some # attributes from another parser, so check that they
             # are not overwritten
+            # TODO: ...or does argparse allow overwriting?
             # TODO: asserting isn't the best way to validate arguments...
             assert not hasattr(self._namespace, argdef.dest)
             if argdef.default is not SUPPRESS:
