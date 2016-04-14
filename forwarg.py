@@ -37,16 +37,16 @@ class Action:
         self.argholder = argholder
 
     def process_flag(self):
-        # Call check_value because the flag can be specified multiple
+        # Call check_flag because the flag can be specified multiple
         #  times, and only the last occurrence is checked at the end of the
         #  main parsing loop
         # If no check was done, it could be possible to do something like
         #  '--option1 --option2 --option1=value', and, if --option1
         #  requires a value, an error wouldn't be raised because it would
         #  be assigned by the second instance
-        # Note that check_value already checks
+        # Note that check_flag already checks
         #  if self.argholder.number_of_parsed_flags > 0
-        self.check_value()
+        self.check_flag()
         self._process_flag()
         # Increment this only after _process_flag, for consistency with
         # store_value below
@@ -60,6 +60,7 @@ class Action:
 
     def store_value(self, newvalue):
         self._store_value(newvalue)
+        self.check_value(newvalue)
         # Increment this only after _store_value, which could raise the
         # UnwantedValueError exception, thus not storing the value
         self.argholder.number_of_parsed_values_for_all_flags += 1
@@ -70,12 +71,15 @@ class Action:
         # subclasses
         raise NotImplementedError()
 
+    def check_flag(self):
+        raise NotImplementedError()
+
     def check_value(self):
         raise NotImplementedError()
 
 
 class _ActionStore(Action):
-    def check_value(self):
+    def check_flag(self):
         # This method is overridden by at least ActionStoreConst
         nargs = self.argdef.nargs
 
@@ -92,6 +96,11 @@ class _ActionStore(Action):
             elif nargs == '?':
                 if self.argholder.number_of_parsed_values_for_current_flag < 1:
                     self._default_to_const()
+
+    def check_value(self, newvalue):
+        if self.argdef.choices is not None and \
+            newvalue not in self.argdef.choices:
+            raise InvalidArgumentError(newvalue)
 
     def _default_to_const(self):
         raise NotImplementedError()
@@ -202,7 +211,12 @@ class ActionStoreConst(Action):
     def _store_value(self, newvalue):
         raise UnwantedValueError(newvalue)
 
-    def check_value(self):
+    def check_flag(self):
+        # No values are needed and ever stored, so just skip this check for
+        # this action
+        pass
+
+    def check_value(self, newvalue):
         # No values are needed and ever stored, so just skip this check for
         # this action
         pass
@@ -318,8 +332,6 @@ class _ArgumentDefinition:
             #       https://docs.python.org/3/library/argparse.html#type
             #       https://docs.python.org/3/library/argparse.html#default
             raise NotImplementedError()
-        if choices is not None:
-            raise NotImplementedError()
         if required is not None:
             raise NotImplementedError()
         if help is not None:
@@ -336,6 +348,7 @@ class _ArgumentDefinition:
         self.nargs = nargs
         self.const = const
         self.default = default
+        self.choices = choices
         self.dest = dest
 
         # Instantiating action may require the other attributes to be already
@@ -526,7 +539,7 @@ class ParseResults:
         #       to the number of characters in each match group.
 
         for argholder in self.argdef_to_argholder.values():
-            argholder.action.check_value()
+            argholder.action.check_flag()
 
     def filter_whitelist(self, dests=(), groups=()):
         filtered = []
