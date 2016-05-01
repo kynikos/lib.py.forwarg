@@ -99,7 +99,7 @@ class _ActionStore(Action):
 
     def check_value(self, newvalue):
         if self.argdef.choices is not None and \
-            newvalue not in self.argdef.choices:
+                newvalue not in self.argdef.choices:
             raise InvalidArgumentError(newvalue)
 
     def _default_to_const(self):
@@ -513,7 +513,10 @@ class ParseResults:
 
         for index, arg in enumerate(args):
             if self.options_enabled and arg[0] in self.parser.prefix_chars:
-                if arg[1] in self.parser.prefix_chars:
+                if len(arg) == 1:
+                    # This is an isolated single prefix, too ambiguous...
+                    raise UnknownArgumentError(arg)
+                elif arg[1] in self.parser.prefix_chars:
                     if len(arg) == 2:
                         self.splitline.append(_ParsedDoublePrefix(self, index,
                                                                   arg))
